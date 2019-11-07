@@ -25,3 +25,12 @@ dependencies {
     testImplementation group: 'net.bytebuddy', name: 'byte-buddy', version: '1.10.2'
     testImplementation group: 'org.objenesis', name: 'objenesis', version: '3.1'
 }
+
+task testRego(type:Exec) {
+    group = 'Open policy agent'
+    description = 'Runs opa REPL test on source directory'
+    commandLine 'opa', 'test', 'src/main/rego/', 'src/test/rego/', '-l'
+    mustRunAfter test
+}
+
+check.dependsOn testRego
