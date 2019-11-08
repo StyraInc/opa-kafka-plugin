@@ -3,8 +3,7 @@ package com.bisnode.kafka.authorization
 import java.net.InetAddress
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
+import com.fasterxml.jackson.module.scala.{DefaultScalaModule, ScalaObjectMapper}
 import kafka.network.RequestChannel.Session
 import kafka.security.auth.{Operation, Read, Resource, Topic, Write}
 import org.apache.kafka.common.resource.PatternType

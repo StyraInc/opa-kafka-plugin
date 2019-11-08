@@ -11,20 +11,14 @@ repositories {
 }
 
 dependencies {
-    // Must be shipped with JAR
     implementation group: 'com.fasterxml.jackson.module', name: 'jackson-module-scala_2.12', version: '2.10.0'
     implementation group: 'org.apache.kafka', name: 'kafka_2.12', version: '2.3.1'
-
     implementation group: 'com.google.guava', name: 'guava', version: '20.0'
     implementation group: 'com.google.code.findbugs', name: 'jsr305', version: '3.0.2'
 
-    testImplementation 'org.scalatest:scalatest_2.12:3.0.0'
+    testImplementation group: 'org.scalatest', name: 'scalatest_2.12', version: '3.0.0'
     testImplementation group: 'junit', name: 'junit', version: '4.12'
     testImplementation group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.12.1'
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
 }
 
 task testRego(type:Exec) {
@@ -42,3 +36,16 @@ task copyLibs(type: Copy) {
     into 'build/libs'
 }
 build.dependsOn copyLibs
+
+shadowJar {
+    dependencies {
+        exclude(dependency {
+            !(it.moduleGroup in [
+                    'com.bisnode.kafka.authorization',
+                    'com.fasterxml.jackson.module',
+                    'com.thoughtworks.paranamer'
+            ])
+        })
+    }
+}
+
