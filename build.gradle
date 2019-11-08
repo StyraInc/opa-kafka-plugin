@@ -13,7 +13,7 @@ repositories {
 
 dependencies {
     // Must be shipped with JAR
-    implementation group: 'com.fasterxml.jackson.module', name: 'jackson-module-scala_2.11', version: '2.9.10'
+    implementation group: 'com.fasterxml.jackson.module', name: 'jackson-module-scala_2.11', version: '2.9.1'
 
     implementation group: 'org.apache.kafka', name: 'kafka_2.11', version: '1.0.0'
     implementation group: 'com.google.guava', name: 'guava', version: '20.0'

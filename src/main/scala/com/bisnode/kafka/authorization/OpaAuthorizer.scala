@@ -8,7 +8,8 @@ import java.util.concurrent.{Callable, ExecutionException, TimeUnit}
 
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.scala.{DefaultScalaModule, ScalaObjectMapper}
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
+import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.google.common.base.Charsets
 import com.google.common.cache.{Cache, CacheBuilder}
 import kafka.network.RequestChannel
