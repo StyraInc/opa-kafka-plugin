@@ -38,9 +38,6 @@ check.dependsOn testRego
 task copyLibs(type: Copy) {
     from(configurations.default) {
         include 'jackson-module-*'
-        //include '**/*.properties'
-        //include '**/*.xml'
-        //filter(ReplaceTokens, tokens: [version: '2.3.1'])
     }
     into 'build/libs'
 }
