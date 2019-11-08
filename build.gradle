@@ -1,11 +1,10 @@
 plugins {
     id 'scala'
+    id 'com.github.johnrengelman.shadow' version '5.1.0'
 }
 
 group 'com.bisnode.kafka.opa'
 version '1.0-SNAPSHOT'
-
-sourceCompatibility = 1.8
 
 repositories {
     mavenCentral()
@@ -13,15 +12,19 @@ repositories {
 
 dependencies {
     // Must be shipped with JAR
-    implementation group: 'com.fasterxml.jackson.module', name: 'jackson-module-scala_2.11', version: '2.9.1'
+    implementation group: 'com.fasterxml.jackson.module', name: 'jackson-module-scala_2.12', version: '2.10.0'
+    implementation group: 'org.apache.kafka', name: 'kafka_2.12', version: '2.3.1'
 
-    implementation group: 'org.apache.kafka', name: 'kafka_2.11', version: '1.0.0'
     implementation group: 'com.google.guava', name: 'guava', version: '20.0'
     implementation group: 'com.google.code.findbugs', name: 'jsr305', version: '3.0.2'
 
-    testImplementation 'org.scalatest:scalatest_2.11:3.0.0'
+    testImplementation 'org.scalatest:scalatest_2.12:3.0.0'
     testImplementation group: 'junit', name: 'junit', version: '4.12'
     testImplementation group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.12.1'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
 }
 
 task testRego(type:Exec) {
@@ -30,5 +33,15 @@ task testRego(type:Exec) {
     commandLine 'opa', 'test', 'src/main/rego/', 'src/test/rego/', '-l'
     mustRunAfter test
 }
-
 check.dependsOn testRego
+
+task copyLibs(type: Copy) {
+    from(configurations.default) {
+        include 'jackson-module-*'
+        //include '**/*.properties'
+        //include '**/*.xml'
+        //filter(ReplaceTokens, tokens: [version: '2.3.1'])
+    }
+    into 'build/libs'
+}
+build.dependsOn copyLibs

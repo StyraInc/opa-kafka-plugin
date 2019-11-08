@@ -20,7 +20,6 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 
-
 class Input(val session: Session, val operation: Operation, val resource: Resource)
 class Request(val input: Input)
 

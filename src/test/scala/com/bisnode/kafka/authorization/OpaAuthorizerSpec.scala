@@ -7,6 +7,7 @@ import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import kafka.network.RequestChannel.Session
 import kafka.security.auth.{Operation, Read, Resource, Topic, Write}
+import org.apache.kafka.common.resource.PatternType
 import org.apache.kafka.common.security.auth.KafkaPrincipal
 import org.junit.runner.RunWith
 import org.scalatest._
@@ -70,7 +71,7 @@ class OpaAuthorizerSpec extends FlatSpec with Matchers {
 
   def createRequest(username: String, topic: String, operation: Operation): Request = {
     val session = Session(new KafkaPrincipal("User", username), InetAddress.getLoopbackAddress)
-    val resource = Resource(Topic, topic)
+    val resource = Resource(Topic, topic, PatternType.LITERAL)
 
     new Request(new Input(session, operation, resource))
   }
