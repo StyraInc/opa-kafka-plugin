@@ -68,8 +68,6 @@ class OpaAuthorizer extends Authorizer {
       conn.setRequestProperty("Content-Type", "application/json")
       val json = _objectMapper.writeValueAsString(request)
 
-      logger.error(json)
-
       val os = conn.getOutputStream
       try {
         os.write(json.getBytes(StandardCharsets.UTF_8))
