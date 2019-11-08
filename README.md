@@ -1,25 +1,27 @@
 # opa-kafka-plugin
-
 ![](https://github.com/Bisnode/opa-kafka-plugin/workflows/build/badge.svg)
 [![codecov](https://codecov.io/gh/Bisnode/opa-kafka-plugin/branch/master/graph/badge.svg)](https://codecov.io/gh/Bisnode/opa-kafka-plugin)
 
 Open Policy Agent (OPA) plugin for Kafka authorization.
 
+## Prerequisites
+
+* Open Policy Agent (OPA)
+
 # Build from source
 
-TBA
+Using gradle wrapper: `./gradlew build`.\
 
 # Installation
 
-Put the JAR following files in your plugins directory on the Kafka brokers.
-* one
-* two
+Put the following JAR files in your plugins directory on the Kafka brokers.
+* `opa-authorizer-1.0-SNAPSHOT.jar`
 
 Include them in the Kafka classpath.
 E.g. `CLASSPATH=/usr/local/share/kafka/plugins/*`
 
 To activate the opa-kafka-plugin add the authorizer.class.name to server.properties\
-`authorizer.class.name: com.lbg.kafka.opa.OpaAuthorizer`
+`authorizer.class.name: com.bisnode.kafka.authorization.OpaAuthorizer`
 
 <br />
 The plugin supports the following properties:
@@ -34,7 +36,7 @@ The plugin supports the following properties:
 
 # Usage
 
-Example structure of input data provided from opa-kafka-plugin to Open Policy Agent
+Example structure of input data provided from opa-kafka-plugin to Open Policy Agent.
 ```
 {
   "operation": {
@@ -44,14 +46,14 @@ Example structure of input data provided from opa-kafka-plugin to Open Policy Ag
     "resourceType": {
       "name": "Topic"
     },
-    "name": "example-topic"
+    "name": "alice-topic1"
   },
   "session": {
     "principal": {
-      "principalType": "User"
+      "principalType": "alice-producer"
     },
     "clientAddress": "172.21.0.5",
-    "sanitizedUser": "User"
+    "sanitizedUser": "alice-producer"
   }
 }
 ```
@@ -71,10 +73,24 @@ The following table summarizes the supported resource types and operation names.
 | `Topic` | `Read` |
 | `Topic` | `Write` |
 
-## Policy
+## Policy sample
+
+With the [sample policy rego](src/main/rego/README.md) you will out of the box get
+a structure where an "owner" can one user per type (`consumer`, `producer`, `mgmt`). The owner and user type is separated by `-`.
+* Username structure: `<owner>-<type>`
+* Topic name structure: `<owner->.*`
+
+\
+<b>Example:</b> \
+User `alice-consumer` will be...
+* allowed to consume on topic `alice-topic1`
+* allowed to consume on topic `alice-topic-test`
+* denied to produce on any topic
+* denied to consume on topic `bob-topic`
+
 [See sample rego](src/main/rego/README.md)
 
-# Test results
+# Performance
 Performance results of opa-kafka-plugin compared with ACL's and even unauthorized
 access to Kafka shows that there is a very little trade off when it comes to
 performance when using either this opa-kafka-plugin or ACL's.
