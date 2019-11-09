@@ -15,4 +15,8 @@ jobs:
         run: echo 'Building Open Policy Agent for Kafka authorization plugin'
       - name: Build plugin
         run: ./gradlew check shadowJar
+      - uses: actions/upload-artifact@v1
+        with:
+          name: opa-authorizer
+          path: build/libs
 
