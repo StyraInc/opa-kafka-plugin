@@ -21,13 +21,22 @@ dependencies {
     testImplementation group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.12.1'
 }
 
-task testRego(type:Exec) {
-    group = 'Open policy agent'
-    description = 'Runs opa REPL test on source directory'
+task testRego(type: Exec) {
+    group = 'opa'
+    description = 'Runs OPA tests on source directory'
     commandLine 'opa', 'test', 'src/main/rego/', 'src/test/rego/', '-l'
-    mustRunAfter test
 }
-check.dependsOn testRego
+
+if (isOpaInstalled()) {
+    check.dependsOn testRego
+} else {
+    System.err.println 'WARNING: Skipping Rego tests since OPA does not seem to be installed'
+}
+
+// Consider alternatives to this: https://stackoverflow.com/a/52484259
+test.outputs.upToDateWhen {
+    false
+}
 
 task copyLibs(type: Copy) {
     from(configurations.default) {
@@ -49,3 +58,12 @@ shadowJar {
     }
 }
 
+boolean isOpaInstalled() {
+    try {
+        'opa'.execute()
+    } catch (IOException e) {
+        println e.message
+        return false
+    }
+    return true
+}
