@@ -1,90 +1,85 @@
 package com.bisnode.kafka.authorization
 
-import java.io.{IOException, InputStreamReader}
-import java.net.{HttpURLConnection, ProtocolException, URL}
-import java.nio.charset.StandardCharsets
+import java.io.IOException
+import java.net.http.HttpRequest.BodyPublishers
+import java.net.http.HttpResponse.BodyHandlers
+import java.net.http.{HttpClient, HttpRequest}
+import java.net.{ProtocolException, URI, URL}
+import java.time.Duration.ofSeconds
 import java.util
 import java.util.concurrent.{Callable, ExecutionException, TimeUnit}
 
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.{DefaultScalaModule, ScalaObjectMapper}
-import com.google.common.base.Charsets
 import com.google.common.cache.{Cache, CacheBuilder}
+import com.typesafe.scalalogging.LazyLogging
 import kafka.network.RequestChannel
 import kafka.network.RequestChannel.Session
 import kafka.security.auth.{Acl, Authorizer, Operation, Resource}
 import org.apache.kafka.common.security.auth.KafkaPrincipal
-import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 
 class Input(val session: Session, val operation: Operation, val resource: Resource)
 class Request(val input: Input)
 
-//noinspection NotImplementedCode
-class OpaAuthorizer extends Authorizer {
-  private val logger = LoggerFactory.getLogger(classOf[OpaAuthorizer])
-
-  private lazy val _cache = CacheBuilder.newBuilder
-    .initialCapacity(_opaAuthorizerConfiguration.cacheInitialCapacity)
-    .maximumSize(_opaAuthorizerConfiguration.cacheMaxSize)
-    .expireAfterWrite(_opaAuthorizerConfiguration.cacheExpireAfterSeconds, TimeUnit.SECONDS)
-    .build()
-    .asInstanceOf[Cache[Request, Boolean]]
-
-  private val _objectMapper = new ObjectMapper() with ScalaObjectMapper
-  _objectMapper.registerModule(DefaultScalaModule)
-
-  // To be populated by the configure method
-  private var _opaAuthorizerConfiguration : OpaAuthorizerConfig = _
-
-  override def authorize(session: RequestChannel.Session, operation: Operation, resource: Resource): Boolean = {
-    if (_opaAuthorizerConfiguration == null) {
-      logger.warn("OPA configuration not loaded yet")
-      return false
-    }
-
-    val request = new Request(new Input(session, operation, resource))
-    try _cache.get(request, new AllowCallable(request))
-    catch {
-      case e: ExecutionException =>
-        logger.warn("Exception in cache retrieval", e)
-        _opaAuthorizerConfiguration.allowOnError
-    }
-  }
-
-  private class AllowCallable(request: Request) extends Callable[Boolean] {
-    override def call(): Boolean = allow(request)
-  }
-
-  private def allow(request: Request): Boolean = {
-    assert(_opaAuthorizerConfiguration != null)
+class AllowCallable(request: Request, opaUrl: URI, allowOnError: Boolean) extends Callable[Boolean] with LazyLogging {
+  override def call(): Boolean = {
+    val reqJson = AllowCallable.objectMapper.writeValueAsString(request)
+    logger.debug("Cache miss, querying OPA for decision")
     try {
-      val conn = _opaAuthorizerConfiguration.opaUrl.openConnection.asInstanceOf[HttpURLConnection]
-      conn.setDoOutput(true)
-      conn.setRequestMethod("POST")
-      conn.setRequestProperty("Content-Type", "application/json")
-      val json = _objectMapper.writeValueAsString(request)
+      val client = HttpClient.newBuilder.connectTimeout(ofSeconds(5)).build
+      val req = HttpRequest.newBuilder
+        .uri(opaUrl)
+        .timeout(ofSeconds(15))
+        .header("Content-Type", "application/json")
+        .POST(BodyPublishers.ofString(reqJson)).build
 
-      val os = conn.getOutputStream
-      try {
-        os.write(json.getBytes(StandardCharsets.UTF_8))
-        os.flush()
-      } finally if (os != null) os.close()
-      logger.trace(s"Request body: $json")
-      logger.trace(s"Response code: ${conn.getResponseCode}")
-      return _objectMapper.readTree(new InputStreamReader(conn.getInputStream, Charsets.UTF_8)).at("/result").asBoolean
+      logger.trace(s"Querying OPA for object: $reqJson")
+      val resp = client.send(req, BodyHandlers.ofString)
+      logger.trace(s"Response code: ${resp.statusCode}")
+      logger.trace(s"Response body: ${resp.body}")
+
+      return AllowCallable.objectMapper.readTree(resp.body()).at("/result").asBoolean
     } catch {
       case e: JsonProcessingException => logger.warn("Error processing JSON", e)
       case e: ProtocolException => logger.warn("Protocol exception", e)
       case e: IOException => logger.warn("IO exception when connecting to OPA", e)
     }
-    _opaAuthorizerConfiguration.allowOnError
+    allowOnError
+  }
+}
+object AllowCallable {
+  private val objectMapper = (new ObjectMapper() with ScalaObjectMapper).registerModule(DefaultScalaModule)
+}
+
+//noinspection NotImplementedCode
+class OpaAuthorizer extends Authorizer with LazyLogging {
+  private var config: Map[String, String] = Map.empty
+  private lazy val opaUrl = new URL(config("opa.authorizer.url")).toURI
+  private lazy val allowOnError = config.getOrElse("opa.authorizer.allow.on.error", "false").toBoolean
+
+  private lazy val cache = CacheBuilder.newBuilder
+    .initialCapacity(config.getOrElse("opa.authorizer.cache.initial.capacity", "128").toInt)
+    .maximumSize(config.getOrElse("opa.authorizer.cache.maximum.size", "512").toInt)
+    .expireAfterWrite(config.getOrElse("opa.authorizer.cache.expire.after.seconds", "3600").toInt, TimeUnit.SECONDS)
+    .build
+    .asInstanceOf[Cache[Request, Boolean]]
+
+  override def authorize(session: RequestChannel.Session, operation: Operation, resource: Resource): Boolean = {
+    val request = new Request(new Input(session, operation, resource))
+    try cache.get(request, new AllowCallable(request, opaUrl, allowOnError))
+    catch {
+      case e: ExecutionException =>
+        logger.warn("Exception in cache retrieval", e)
+        allowOnError
+    }
   }
 
   override def configure(configs: util.Map[String, _]): Unit = {
-    _opaAuthorizerConfiguration = new OpaAuthorizerConfig(configs.asScala.toMap)
+    logger.debug("Call to configure() with config {}", configs)
+    config = configs.asScala.mapValues(_.asInstanceOf[String]).toMap
   }
 
   // None of the below needs implementations here
@@ -95,46 +90,4 @@ class OpaAuthorizer extends Authorizer {
   override def getAcls(principal: KafkaPrincipal): Map[Resource, Set[Acl]] = ???
   override def getAcls(): Map[Resource, Set[Acl]] = ???
   override def close(): Unit = ???
-}
-
-object OpaAuthorizerConfig {
-  private val URL = "opa.authorizer.url"
-  private val ALLOW_ON_ERROR = "opa.authorizer.allow.on.error"
-  private val CACHE_INITIAL_CAPACITY = "opa.authorizer.cache.initial.capacity"
-  private val CACHE_MAXIMUM_SIZE = "opa.authorizer.cache.maximum.size"
-  private val CACHE_EXPIRE_AFTER_SECONDS = "opa.authorizer.cache.expire.after.seconds"
-
-  final private val CACHE_INITIAL_CAPACITY_DEFAULT = "64"
-  final private val CACHE_MAXIMUM_SIZE_DEFAULT = "256"
-  final private val CACHE_EXPIRE_AFTER_SECONDS_DEFAULT = "3600"
-}
-
-class OpaAuthorizerConfig private[authorization](val config: Map[String, _]) {
-  private val logger = LoggerFactory.getLogger(classOf[OpaAuthorizerConfig])
-  logger.trace("Configuration object initialized: {}", config)
-
-  final private val _opaUrl = new URL(config.getOrElse(OpaAuthorizerConfig.URL, "").asInstanceOf[String])
-  final private val _allowOnError = config.getOrElse(OpaAuthorizerConfig.ALLOW_ON_ERROR, "false")
-    .asInstanceOf[String].toBoolean
-
-  final private val _cacheInitialCapacity = config.getOrElse(
-    OpaAuthorizerConfig.CACHE_INITIAL_CAPACITY,
-    OpaAuthorizerConfig.CACHE_INITIAL_CAPACITY_DEFAULT
-  ).asInstanceOf[String].toInt
-
-  final private val _cacheMaxSize = config.getOrElse(
-    OpaAuthorizerConfig.CACHE_MAXIMUM_SIZE,
-    OpaAuthorizerConfig.CACHE_MAXIMUM_SIZE_DEFAULT
-  ).asInstanceOf[String].toInt
-
-  final private val _cacheExpireAfterSeconds = config.getOrElse(
-    OpaAuthorizerConfig.CACHE_EXPIRE_AFTER_SECONDS,
-    OpaAuthorizerConfig.CACHE_EXPIRE_AFTER_SECONDS_DEFAULT
-  ).asInstanceOf[String].toInt
-
-  private[authorization] def opaUrl: URL = _opaUrl
-  private[authorization] def allowOnError = _allowOnError
-  private[authorization] def cacheInitialCapacity = _cacheInitialCapacity
-  private[authorization] def cacheMaxSize = _cacheMaxSize
-  private[authorization] def cacheExpireAfterSeconds = _cacheExpireAfterSeconds
 }

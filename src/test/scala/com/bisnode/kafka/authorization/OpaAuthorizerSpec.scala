@@ -1,6 +1,9 @@
 package com.bisnode.kafka.authorization
 
-import java.net.InetAddress
+import java.net.{InetAddress, URI}
+import java.net.http.HttpRequest.BodyPublishers
+import java.net.http.HttpResponse.BodyHandlers
+import java.net.http.{HttpClient, HttpRequest, HttpResponse}
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.{DefaultScalaModule, ScalaObjectMapper}
@@ -14,15 +17,28 @@ import org.scalatest.junit.JUnitRunner
 
 /**
  * Integration level tests of Kafka policy as described in src/main/rego/README.md
- * NOTE: Requires a running OPA instance with the provided policy loaded.
+ * NOTE: Requires a running OPA instance with the provided policy loaded
  */
 @RunWith(classOf[JUnitRunner])
 class OpaAuthorizerSpec extends FlatSpec with Matchers {
 
+  private val opaUrl = "http://localhost:8181/v1/data/kafka/authz/allow"
+  private val objectMapper = (new ObjectMapper() with ScalaObjectMapper).registerModule(DefaultScalaModule)
+  private lazy val opaResponse = testOpaConnection()
+
+  override def withFixture(test: NoArgTest): Outcome = {
+    assume(opaResponse.isDefined, s"Assumed OPA would respond to request at $opaUrl")
+
+    val resp = opaResponse.get
+    assume(resp.statusCode() == 200, "Assumed OPA would respond with status code 200")
+    assume(!objectMapper.readTree(resp.body()).at("/result").asBoolean, "Assumed OPA would return negative result")
+
+    super.withFixture(test)
+  }
+
   "Request object" should "serialize to JSON" in {
     val request = createRequest("bob", "bob-topic", Read)
-    val objectMapper = new ObjectMapper() with ScalaObjectMapper
-    objectMapper.registerModule(DefaultScalaModule)
+
 
     objectMapper.writeValueAsString(request) should not be "{}"
   }
@@ -62,7 +78,7 @@ class OpaAuthorizerSpec extends FlatSpec with Matchers {
   def setupAuthorizer(): OpaAuthorizer = {
     val opaAuthorizer = new OpaAuthorizer()
     val config = new java.util.HashMap[String, String]
-    config.put("opa.authorizer.url", "http://localhost:8181/v1/data/kafka/authz/allow")
+    config.put("opa.authorizer.url", opaUrl)
     config.put("opa.authorizer.allow.on.error", "false")
     opaAuthorizer.configure(config)
     opaAuthorizer
@@ -73,5 +89,14 @@ class OpaAuthorizerSpec extends FlatSpec with Matchers {
     val resource = Resource(Topic, topic, PatternType.LITERAL)
 
     new Request(new Input(session, operation, resource))
+  }
+
+  def testOpaConnection(): Option[HttpResponse[String]] = {
+    try {
+      val req = HttpRequest.newBuilder.uri(new URI(opaUrl)).POST(BodyPublishers.ofString("{}")).build
+      Option(HttpClient.newBuilder.build.send(req, BodyHandlers.ofString))
+    } catch {
+      case _: Exception => Option.empty
+    }
   }
 }
