@@ -6,6 +6,7 @@ jobs:
     name: Build plugin
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v1
       - name: Echo echo
         run: echo 'Building Open Policy Agent for Kafka authorization plugin'
       - name: Build plugin
