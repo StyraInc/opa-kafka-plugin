@@ -88,7 +88,7 @@ class OpaAuthorizerSpec extends FlatSpec with Matchers {
     val session = Session(new KafkaPrincipal("User", username), InetAddress.getLoopbackAddress)
     val resource = Resource(Topic, topic, PatternType.LITERAL)
 
-    new Request(new Input(session, operation, resource))
+    Request(Input(session, operation, resource))
   }
 
   def testOpaConnection(): Option[HttpResponse[String]] = {

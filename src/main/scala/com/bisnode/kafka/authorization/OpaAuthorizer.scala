@@ -21,8 +21,8 @@ import org.apache.kafka.common.security.auth.KafkaPrincipal
 
 import scala.collection.JavaConverters._
 
-class Input(val session: Session, val operation: Operation, val resource: Resource)
-class Request(val input: Input)
+case class Input(session: Session, operation: Operation, resource: Resource)
+case class Request(input: Input)
 
 class AllowCallable(request: Request, opaUrl: URI, allowOnError: Boolean) extends Callable[Boolean] with LazyLogging {
   override def call(): Boolean = {
@@ -68,7 +68,7 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
     .asInstanceOf[Cache[Request, Boolean]]
 
   override def authorize(session: RequestChannel.Session, operation: Operation, resource: Resource): Boolean = {
-    val request = new Request(new Input(session, operation, resource))
+    val request = Request(Input(session, operation, resource))
     try cache.get(request, new AllowCallable(request, opaUrl, allowOnError))
     catch {
       case e: ExecutionException =>
