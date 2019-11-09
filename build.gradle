@@ -38,6 +38,7 @@ test.outputs.upToDateWhen {
     false
 }
 
+// TODO: Remove as this should not be needed once shadowJar confirmed to work
 task copyLibs(type: Copy) {
     from(configurations.default) {
         include 'jackson-module-*'

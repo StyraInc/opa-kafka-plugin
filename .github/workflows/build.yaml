@@ -1,0 +1,13 @@
+name: Build
+on: [push]
+
+jobs:
+  build:
+    name: Build plugin
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo echo
+        run: echo 'Building Open Policy Agent for Kafka authorization plugin'
+      - name: Build plugin
+        run: ./gradlew check shadowJar
+
