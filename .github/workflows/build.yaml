@@ -13,16 +13,18 @@ jobs:
           java-version: '11.x.x'
       - name: env
         run: env
-      - name: mkdir ./bin
-        run: mkdir ./bin
+#      - name: mkdir ./bin
+#        run: mkdir ./bin
       - name: download opa
         uses: wei/wget@v1
         with:
-          args: -O ./bin/opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64
+          args: -O /usr/local/bin/opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64
       - name: chmod +x opa
-        run: sudo chmod +x ./bin/opa
-      - name: set PATH
-        run: export PATH=$PATH:$(pwd)/bin
+        run: sudo chmod +x /usr/local/bin/opa
+      - name: ls -lah /usr/local/bin
+        run: ls -lah /usr/local/bin
+#      - name: set PATH
+#        run: export PATH=$PATH:$(pwd)/bin
       - name: build plugin
         run: ./gradlew check shadowJar
       - uses: actions/upload-artifact@v1
