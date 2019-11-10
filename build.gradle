@@ -24,7 +24,7 @@ dependencies {
 task testRego(type: Exec) {
     group = 'opa'
     description = 'Runs OPA tests on source directory'
-    commandLine 'opa', 'test', 'src/main/rego/', 'src/test/rego/', '-l'
+    commandLine getOpaPath(), 'test', 'src/main/rego/', 'src/test/rego/', '-l'
 }
 
 if (isOpaInstalled()) {
@@ -59,9 +59,18 @@ shadowJar {
     }
 }
 
+String getOpaPath() {
+    def opa = 'opa'
+    if (System.getenv('GITHUB_ACTIONS')) {
+        opa = project.file('opa').absolutePath
+        println opa
+    }
+    return opa
+}
+
 boolean isOpaInstalled() {
     try {
-        'opa'.execute()
+        getOpaPath().execute()
     } catch (IOException e) {
         println e.message
         return false

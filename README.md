@@ -1,6 +1,6 @@
 # opa-kafka-plugin
 
-![](https://github.com/Bisnode/opa-kafka-plugin/workflows/Build/badge.svg)
+![](https://github.com/Bisnode/opa-kafka-plugin/workflows/build/badge.svg)
 
 Open Policy Agent (OPA) plugin for Kafka authorization.
 
