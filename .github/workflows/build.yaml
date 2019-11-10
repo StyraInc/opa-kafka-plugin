@@ -19,8 +19,15 @@ jobs:
         run: sudo mv opa /usr/local/bin/ && sudo chmod +x /usr/local/bin/opa
       - name: Build plugin
         run: ./gradlew check shadowJar
+      - name: Jacoco test report
+        run: ./gradlew jacocoTestReport
       - uses: actions/upload-artifact@v1
         with:
           name: opa-authorizer
           path: build/libs
+      - uses: codecov/codecov-action@v1.0.3
+        with:
+          token: ${{secrets.CODECOV_TOKEN}}
+          file: ./build/reports/jacoco/test/jacocoTestReport.xml
+          name: opa-kafka-plugin
 

@@ -1,5 +1,6 @@
 plugins {
     id 'scala'
+    id 'jacoco'
     id 'com.github.johnrengelman.shadow' version '5.1.0'
 }
 
@@ -56,6 +57,13 @@ shadowJar {
                     'com.thoughtworks.paranamer'
             ])
         })
+    }
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled true
+        html.enabled false
     }
 }
 
