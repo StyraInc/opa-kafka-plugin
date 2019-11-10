@@ -11,8 +11,8 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: '11.x.x'
-      - name: env?
-          run: env
+      - name: env
+        run: env
       - name: download opa
         uses: wei/wget@v1
         with:
