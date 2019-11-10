@@ -33,8 +33,15 @@ task coverageRego(type: Exec) {
     }
     group = 'opa'
     description = 'Generate OPA coverage report'
-    standardOutput = new FileOutputStream('build/reports/opa/opa-coverage.json')
+    standardOutput = new ByteArrayOutputStream()
     commandLine 'opa', 'test', '--coverage', '--format=json', 'src/main/rego/', 'src/test/rego/'
+    doLast {
+        def file = new File(projectDir.absolutePath + '/build/reports/opa/opa-coverage.json')
+        if (!file.exists()) {
+            file.createNewFile()
+        }
+        file.text = standardOutput.toString()
+    }
 }
 
 if (isOpaInstalled()) {
