@@ -20,10 +20,11 @@ jobs:
         with:
           args: -O ./bin/opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64
       - name: chmod +x opa
-        run: chmod +x ./bin/opa
+        #chmod +x ./bin/opa
+        run: ls -lah ./bin
       - name: set PATH
         run: export PATH=$PATH:$(pwd)/bin
-      - name: build pluginAd
+      - name: build plugin
         run: ./gradlew check shadowJar
       - uses: actions/upload-artifact@v1
         with:
