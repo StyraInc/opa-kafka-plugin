@@ -3,7 +3,7 @@ on: [push]
 
 jobs:
   build:
-    name: build plugin
+    name: Build plugin
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
@@ -11,25 +11,13 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: '11.x.x'
-      - name: env
-        run: env
-#      - name: mkdir ./bin
-#        run: mkdir ./bin
-      - name: download opa
+      - name: Download opa
         uses: wei/wget@v1
         with:
           args: -O opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64
-      - name: mv opa
-        run: sudo mv opa /usr/local/bin/
-      - name: chmod +x opa
-        run: sudo chmod +x /usr/local/bin/opa
-      - name: ls -lah /usr/local/bin
-        run: ls -lah /usr/local/bin
-      - name: opa --help
-        run: opa --help
-#      - name: set PATH
-#        run: export PATH=$PATH:$(pwd)/bin
-      - name: build plugin
+      - name: Install opa
+        run: sudo mv opa /usr/local/bin/ && sudo chmod +x /usr/local/bin/opa
+      - name: Build plugin
         run: ./gradlew check shadowJar
       - uses: actions/upload-artifact@v1
         with:
