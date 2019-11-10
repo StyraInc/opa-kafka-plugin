@@ -16,7 +16,9 @@ jobs:
       - name: download opa
         uses: wei/wget@v1
         with:
-          args: -O opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64
+          args: -O /usr/local/bin/opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64
+      - name: chmod +x opa
+        run: chmod +x /usr/local/bin/opa
       - name: build plugin
         run: ./gradlew check shadowJar
       - uses: actions/upload-artifact@v1

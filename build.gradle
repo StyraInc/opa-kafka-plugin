@@ -61,10 +61,10 @@ shadowJar {
 
 String getOpaPath() {
     def opa = 'opa'
-    if (System.getenv('GITHUB_ACTIONS')) {
-        opa = project.file('opa').absolutePath
-        println opa
-    }
+//    if (System.getenv('GITHUB_ACTIONS')) {
+//        opa = project.file('opa').absolutePath
+//        println opa
+//    }
     return opa
 }
 
