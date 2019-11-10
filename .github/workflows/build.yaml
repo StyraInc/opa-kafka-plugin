@@ -20,8 +20,7 @@ jobs:
         with:
           args: -O ./bin/opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64
       - name: chmod +x opa
-        #chmod +x ./bin/opa
-        run: ls -lah ./bin
+        run: sudo chmod +x ./bin/opa
       - name: set PATH
         run: export PATH=$PATH:$(pwd)/bin
       - name: build plugin
