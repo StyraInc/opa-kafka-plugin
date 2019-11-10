@@ -21,39 +21,6 @@ import org.apache.kafka.common.security.auth.KafkaPrincipal
 
 import scala.collection.JavaConverters._
 
-case class Input(session: Session, operation: Operation, resource: Resource)
-case class Request(input: Input)
-
-class AllowCallable(request: Request, opaUrl: URI, allowOnError: Boolean) extends Callable[Boolean] with LazyLogging {
-  override def call(): Boolean = {
-    val reqJson = AllowCallable.objectMapper.writeValueAsString(request)
-    logger.debug("Cache miss, querying OPA for decision")
-    try {
-      val client = HttpClient.newBuilder.connectTimeout(ofSeconds(5)).build
-      val req = HttpRequest.newBuilder
-        .uri(opaUrl)
-        .timeout(ofSeconds(15))
-        .header("Content-Type", "application/json")
-        .POST(BodyPublishers.ofString(reqJson)).build
-
-      logger.trace(s"Querying OPA for object: $reqJson")
-      val resp = client.send(req, BodyHandlers.ofString)
-      logger.trace(s"Response code: ${resp.statusCode}")
-      logger.trace(s"Response body: ${resp.body}")
-
-      return AllowCallable.objectMapper.readTree(resp.body()).at("/result").asBoolean
-    } catch {
-      case e: JsonProcessingException => logger.warn("Error processing JSON", e)
-      case e: ProtocolException => logger.warn("Protocol exception", e)
-      case e: IOException => logger.warn("IO exception when connecting to OPA", e)
-    }
-    allowOnError
-  }
-}
-object AllowCallable {
-  private val objectMapper = (new ObjectMapper() with ScalaObjectMapper).registerModule(DefaultScalaModule)
-}
-
 //noinspection NotImplementedCode
 class OpaAuthorizer extends Authorizer with LazyLogging {
   private var config: Map[String, String] = Map.empty
@@ -91,3 +58,36 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
   override def getAcls(): Map[Resource, Set[Acl]] = ???
   override def close(): Unit = ???
 }
+
+object AllowCallable {
+  private val objectMapper = (new ObjectMapper() with ScalaObjectMapper).registerModule(DefaultScalaModule)
+}
+class AllowCallable(request: Request, opaUrl: URI, allowOnError: Boolean) extends Callable[Boolean] with LazyLogging {
+  override def call(): Boolean = {
+    val reqJson = AllowCallable.objectMapper.writeValueAsString(request)
+    logger.debug("Cache miss, querying OPA for decision")
+    try {
+      val client = HttpClient.newBuilder.connectTimeout(ofSeconds(5)).build
+      val req = HttpRequest.newBuilder
+        .uri(opaUrl)
+        .timeout(ofSeconds(15))
+        .header("Content-Type", "application/json")
+        .POST(BodyPublishers.ofString(reqJson)).build
+
+      logger.trace(s"Querying OPA for object: $reqJson")
+      val resp = client.send(req, BodyHandlers.ofString)
+      logger.trace(s"Response code: ${resp.statusCode}")
+      logger.trace(s"Response body: ${resp.body}")
+
+      return AllowCallable.objectMapper.readTree(resp.body()).at("/result").asBoolean
+    } catch {
+      case e: JsonProcessingException => logger.warn("Error processing JSON", e)
+      case e: ProtocolException => logger.warn("Protocol exception", e)
+      case e: IOException => logger.warn("IO exception when connecting to OPA", e)
+    }
+    allowOnError
+  }
+}
+
+case class Input(session: Session, operation: Operation, resource: Resource)
+case class Request(input: Input)
