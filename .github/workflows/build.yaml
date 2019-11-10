@@ -13,13 +13,17 @@ jobs:
           java-version: '11.x.x'
       - name: env
         run: env
+      - name: mkdir ./bin
+        run: mkdir ./bin
       - name: download opa
         uses: wei/wget@v1
         with:
-          args: -O /usr/local/bin/opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64
+          args: -O ./bin/opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64
       - name: chmod +x opa
-        run: chmod +x /usr/local/bin/opa
-      - name: build plugin
+        run: chmod +x ./bin/opa
+      - name: set PATH
+        run: export PATH=$PATH:$(pwd)/bin
+      - name: build pluginAd
         run: ./gradlew check shadowJar
       - uses: actions/upload-artifact@v1
         with:
