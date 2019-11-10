@@ -27,9 +27,18 @@ task testRego(type: Exec) {
     description = 'Runs OPA tests on source directory'
     commandLine 'opa', 'test', 'src/main/rego/', 'src/test/rego/', '-l'
 }
+task coverageRego(type: Exec) {
+    doFirst {
+        mkdir 'build/reports/opa'
+    }
+    group = 'opa'
+    description = 'Generate OPA coverage report'
+    standardOutput = new FileOutputStream('build/reports/opa/opa-coverage.json')
+    commandLine 'opa', 'test', '--coverage', '--format=json', 'src/main/rego/', 'src/test/rego/'
+}
 
 if (isOpaInstalled()) {
-    check.dependsOn testRego
+    check.dependsOn(testRego, coverageRego)
 } else {
     System.err.println 'WARNING: Skipping Rego tests since OPA does not seem to be installed'
 }

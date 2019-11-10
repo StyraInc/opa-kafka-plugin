@@ -37,4 +37,9 @@ jobs:
           token: ${{secrets.CODECOV_TOKEN}}
           file: ./build/reports/jacoco/test/jacocoTestReport.xml
           name: opa-kafka-plugin
+      - uses: codecov/codecov-action@v1.0.3
+        with:
+          token: ${{secrets.CODECOV_TOKEN}}
+          file: ./build/reports/opa/opa-coverage.json
+          name: opa-policies
 
