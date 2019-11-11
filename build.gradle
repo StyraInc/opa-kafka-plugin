@@ -78,7 +78,7 @@ task opaCoverageToCodecov {
 }
 
 if (isOpaInstalled()) {
-    check.dependsOn(testRego, coverageRego)
+    check.dependsOn(testRego, coverageRego, opaCoverageToCodecov)
 } else {
     System.err.println 'WARNING: Skipping Rego tests since OPA does not seem to be installed'
 }

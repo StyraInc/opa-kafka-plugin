@@ -11,18 +11,9 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: '11.x.x'
-      - uses: actions/cache@v1
-        id: cache
-        with:
-          path: /usr/local/bin/opa
-          key: ${{ runner.os }}-opa
       - name: Download opa
-        if: steps.cache.outputs.cache-hit != 'true'
-        uses: wei/wget@v1
-        with:
-          args: -O opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64
+        run: wget -O opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64
       - name: Install opa
-        if: steps.cache.outputs.cache-hit != 'true'
         run: sudo mv opa /usr/local/bin/ && sudo chmod +x /usr/local/bin/opa
       - name: Build plugin
         run: ./gradlew check shadowJar
