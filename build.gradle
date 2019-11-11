@@ -76,6 +76,7 @@ task opaCoverageToCodecov {
     def codecovFile = file(projectDir.absolutePath + '/build/reports/opa/opa-codecov-coverage.json')
     codecovFile.text = new groovy.json.JsonBuilder(codecov).toString()
 }
+opaCoverageToCodecov.dependsOn coverageRego
 
 if (isOpaInstalled()) {
     check.dependsOn(testRego, coverageRego, opaCoverageToCodecov)
