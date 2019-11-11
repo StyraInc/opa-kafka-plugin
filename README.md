@@ -4,15 +4,15 @@
 
 Open Policy Agent (OPA) plugin for Kafka authorization.
 
-## Prerequisites
+### Prerequisites
 
 * Open Policy Agent (OPA)
 
-# Build from source
+## Build from source
 
 Using gradle wrapper: `./gradlew build`.\
 
-# Installation
+## Installation
 
 Put the following JAR files in your plugins directory on the Kafka brokers.
 * `opa-authorizer-1.0-SNAPSHOT.jar`
@@ -34,7 +34,7 @@ The plugin supports the following properties:
 | `opa.authorizer.cache.maximum.size` | `100` | Max decision cache size. |
 | `opa.authorizer.cache.expire.after.ms` | `600000` | Decision cache expiry in milliseconds. |
 
-# Usage
+## Usage
 
 Example structure of input data provided from opa-kafka-plugin to Open Policy Agent.
 ```
@@ -73,7 +73,7 @@ The following table summarizes the supported resource types and operation names.
 | `Topic` | `Read` |
 | `Topic` | `Write` |
 
-## Policy sample
+### Policy sample
 
 With the [sample policy rego](src/main/rego/README.md) you will out of the box get
 a structure where an "owner" can one user per type (`consumer`, `producer`, `mgmt`). The owner and user type is separated by `-`.
@@ -90,7 +90,7 @@ User `alice-consumer` will be...
 
 [See sample rego](src/main/rego/README.md)
 
-# Performance
+## Performance
 Performance results of opa-kafka-plugin compared with ACL's and even unauthorized
 access to Kafka shows that there is a very little trade off when it comes to
 performance when using either this opa-kafka-plugin or ACL's.
@@ -107,7 +107,7 @@ The tests were made with the following setup:
 Background noise on one topic with a producer producing 5000 msgs/s with message
 size of 512b were used in all tests.
 
-## opa-kafka-plugin test results
+### opa-kafka-plugin test results
 
 |Test #|Records sent|Payload(b)|records/s|MB/sec|avg latency (ms)|latency avg 50th perc (ms)|latency avg 95th perc (ms)|latency avg 99th perc (ms)|latency avg 99,99 perc (ms)|
 |---|---|---|---|---|---|---|---|---|---|
@@ -115,7 +115,7 @@ size of 512b were used in all tests.
 |2|102000|330|170|0.05||||||
 |3|102000|1200|170|0.19||||||
 
-## ACL test results
+### ACL test results
 
 |Test #|Records sent|Payload(b)|records/s|MB/sec|avg latency (ms)|latency avg 50th perc (ms)|latency avg 95th perc (ms)|latency avg 99th perc (ms)|latency avg 99,99 perc (ms)|
 |---|---|---|---|---|---|---|---|---|---|
@@ -123,7 +123,7 @@ size of 512b were used in all tests.
 |2|102000|330|170|0.05|3.21|1|3|22|566|
 |3|102000|1200|170|0.19|3.01|1|3|19|504|
 
-## No authorization test results
+### No authorization test results
 
 |Test #|Records sent|Payload(b)|records/s|MB/sec|avg latency (ms)|latency avg 50th perc (ms)|latency avg 95th perc (ms)|latency avg 99th perc (ms)|latency avg 99,99 perc (ms)|
 |---|---|---|---|---|---|---|---|---|---|
