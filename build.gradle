@@ -28,6 +28,7 @@ task testRego(type: Exec) {
     commandLine 'opa', 'test', 'src/main/rego/', 'src/test/rego/', '-l'
 }
 task coverageRego(type: Exec) {
+    println "coverageRego"
     doFirst {
         mkdir 'build/reports/opa'
     }
@@ -46,6 +47,7 @@ task coverageRego(type: Exec) {
 // Transform OPA coverage format: https://www.openpolicyagent.org/docs/latest/policy-testing/#coverage
 // Into a format recognized by Codecov:  https://docs.codecov.io/reference#section-codecov-json-report-format
 task opaCoverageToCodecov {
+    println "opaCoverageToCodecov"
     def jsonFile = file(projectDir.absolutePath + '/build/reports/opa/opa-coverage.json')
     def opaCoverage = new groovy.json.JsonSlurper().parseText(jsonFile.text) as Map
     def files = (opaCoverage['files'] as Map<String, Object>).keySet()
@@ -79,7 +81,7 @@ task opaCoverageToCodecov {
 opaCoverageToCodecov.dependsOn coverageRego
 
 if (isOpaInstalled()) {
-    check.dependsOn(testRego, coverageRego, opaCoverageToCodecov)
+    check.dependsOn(testRego, opaCoverageToCodecov)
 } else {
     System.err.println 'WARNING: Skipping Rego tests since OPA does not seem to be installed'
 }
