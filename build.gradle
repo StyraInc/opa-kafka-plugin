@@ -42,12 +42,14 @@ task coverageRego(type: Exec) {
             file.createNewFile()
         }
         file.text = standardOutput.toString()
+        ('ls -lah ' + projectDir.absolutePath + '/build/reports/opa').execute()
     }
 }
 // Transform OPA coverage format: https://www.openpolicyagent.org/docs/latest/policy-testing/#coverage
 // Into a format recognized by Codecov:  https://docs.codecov.io/reference#section-codecov-json-report-format
 task opaCoverageToCodecov {
     println "opaCoverageToCodecov"
+    ('ls -lah ' + projectDir.absolutePath + '/build/reports/opa').execute()
     def jsonFile = file(projectDir.absolutePath + '/build/reports/opa/opa-coverage.json')
     def opaCoverage = new groovy.json.JsonSlurper().parseText(jsonFile.text) as Map
     def files = (opaCoverage['files'] as Map<String, Object>).keySet()
