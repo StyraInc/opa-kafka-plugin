@@ -36,12 +36,45 @@ task coverageRego(type: Exec) {
     standardOutput = new ByteArrayOutputStream()
     commandLine 'opa', 'test', '--coverage', '--format=json', 'src/main/rego/', 'src/test/rego/'
     doLast {
-        def file = new File(projectDir.absolutePath + '/build/reports/opa/opa-coverage.json')
+        def file = file(projectDir.absolutePath + '/build/reports/opa/opa-coverage.json')
         if (!file.exists()) {
             file.createNewFile()
         }
         file.text = standardOutput.toString()
     }
+}
+// Transform OPA coverage format: https://www.openpolicyagent.org/docs/latest/policy-testing/#coverage
+// Into a format recognized by Codecov:  https://docs.codecov.io/reference#section-codecov-json-report-format
+task opaCoverageToCodecov {
+    def jsonFile = file(projectDir.absolutePath + '/build/reports/opa/opa-coverage.json')
+    def opaCoverage = new groovy.json.JsonSlurper().parseText(jsonFile.text) as Map
+    def files = (opaCoverage['files'] as Map<String, Object>).keySet()
+    def codecov = [coverage: [filename: [:]]]
+    files.findAll { !it.endsWith("_test.rego") }.each {
+        def currentFile = it
+        if (opaCoverage['files'][currentFile]['covered'] instanceof List) {
+            (opaCoverage['files'][currentFile]['covered'] as List).each {
+                for (int i = (it['start']['row'] as int); i <= (it['end']['row'] as int); i++) {
+                    if (codecov['coverage']['filename'][currentFile] == null) {
+                        codecov['coverage']['filename'][currentFile] = [:]
+                    }
+                    codecov['coverage']['filename'][currentFile]["$i"] = 1
+                }
+            }
+        }
+        if (opaCoverage['files'][currentFile]['not_covered'] instanceof List) {
+            (opaCoverage['files'][currentFile]['not_covered'] as List).each {
+                for (int i = (it['start']['row'] as int); i <= (it['end']['row'] as int); i++) {
+                    if (codecov['coverage']['filename'][currentFile] == null) {
+                        codecov['coverage']['filename'][currentFile] = [:]
+                    }
+                    codecov['coverage']['filename'][currentFile]["$i"] = 0
+                }
+            }
+        }
+    }
+    def codecovFile = file(projectDir.absolutePath + '/build/reports/opa/opa-codecov-coverage.json')
+    codecovFile.text = new groovy.json.JsonBuilder(codecov).toString()
 }
 
 if (isOpaInstalled()) {
