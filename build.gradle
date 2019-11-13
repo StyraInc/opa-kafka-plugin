@@ -2,6 +2,7 @@ plugins {
     id 'scala'
     id 'jacoco'
     id 'com.github.johnrengelman.shadow' version '5.1.0'
+    id 'com.bisnode.opa' version '0.1.0'
 }
 
 group 'com.bisnode.kafka.opa'
@@ -22,84 +23,6 @@ dependencies {
     testImplementation group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.12.1'
 }
 
-task testRego(type: Exec) {
-    group = 'opa'
-    description = 'Runs OPA tests on source directory'
-    commandLine 'opa', 'test', 'src/main/rego/', 'src/test/rego/', '-l'
-}
-task coverageRego(type: Exec) {
-    doFirst {
-        mkdir 'build/reports/opa'
-    }
-    group = 'opa'
-    description = 'Generate OPA coverage report'
-    standardOutput = new ByteArrayOutputStream()
-    commandLine 'opa', 'test', '--coverage', '--format=json', 'src/main/rego/', 'src/test/rego/'
-    doLast {
-        def file = file(projectDir.absolutePath + '/build/reports/opa/opa-coverage.json')
-        if (!file.exists()) {
-            file.createNewFile()
-        }
-        file.text = standardOutput.toString()
-    }
-}
-// Transform OPA coverage format: https://www.openpolicyagent.org/docs/latest/policy-testing/#coverage
-// Into a format recognized by Codecov:  https://docs.codecov.io/reference#section-codecov-json-report-format
-task opaCoverageToCodecov {
-    doLast {
-        def jsonFile = file(projectDir.absolutePath + '/build/reports/opa/opa-coverage.json')
-        def opaCoverage = new groovy.json.JsonSlurper().parseText(jsonFile.text) as Map
-        def files = (opaCoverage['files'] as Map<String, Object>).keySet()
-        def codecov = [coverage: [filename: [:]]]
-        files.findAll { !it.endsWith("_test.rego") }.each {
-            def currentFile = it
-            if (opaCoverage['files'][currentFile]['covered'] instanceof List) {
-                (opaCoverage['files'][currentFile]['covered'] as List).each {
-                    for (int i = (it['start']['row'] as int); i <= (it['end']['row'] as int); i++) {
-                        if (codecov['coverage']['filename'][currentFile] == null) {
-                            codecov['coverage']['filename'][currentFile] = [:]
-                        }
-                        codecov['coverage']['filename'][currentFile]["$i"] = 1
-                    }
-                }
-            }
-            if (opaCoverage['files'][currentFile]['not_covered'] instanceof List) {
-                (opaCoverage['files'][currentFile]['not_covered'] as List).each {
-                    for (int i = (it['start']['row'] as int); i <= (it['end']['row'] as int); i++) {
-                        if (codecov['coverage']['filename'][currentFile] == null) {
-                            codecov['coverage']['filename'][currentFile] = [:]
-                        }
-                        codecov['coverage']['filename'][currentFile]["$i"] = 0
-                    }
-                }
-            }
-        }
-        def codecovFile = file(projectDir.absolutePath + '/build/reports/opa/opa-codecov-coverage.json')
-        codecovFile.text = new groovy.json.JsonBuilder(codecov).toString()
-    }
-}
-opaCoverageToCodecov.dependsOn coverageRego
-
-if (isOpaInstalled()) {
-    check.dependsOn(testRego, opaCoverageToCodecov)
-} else {
-    System.err.println 'WARNING: Skipping Rego tests since OPA does not seem to be installed'
-}
-
-// Consider alternatives to this: https://stackoverflow.com/a/52484259
-test.outputs.upToDateWhen {
-    false
-}
-
-// TODO: Remove as this should not be needed once shadowJar confirmed to work
-task copyLibs(type: Copy) {
-    from(configurations.default) {
-        include 'jackson-module-*'
-    }
-    into 'build/libs'
-}
-build.dependsOn copyLibs
-
 shadowJar {
     dependencies {
         exclude(dependency {
@@ -119,28 +42,10 @@ jacocoTestReport {
     }
 }
 
-boolean isOpaInstalled() {
-    try {
-        'opa'.execute()
-    } catch (IOException e) {
-        println e.message
-        return false
-    }
-    return true
-}
-
-test.doFirst {
-    if (isOpaInstalled()) {
-        println 'Starting OPA server for integration tests'
-        ext.process = new ProcessBuilder()
-                .directory(projectDir)
-                .command('opa', 'run', '-s', 'src/main/rego/policy.rego')
-                .start()
-    }
-}
-test.doLast {
-    if (tasks.test.process) {
-        println('Stopping OPA server')
-        tasks.test.process.destroy()
-    }
+check.dependsOn(testRego, testRegoCoverage)
+test.dependsOn startOpa
+test.finalizedBy stopOpa
+test.outputs.upToDateWhen {
+    // Consider alternatives to this: https://stackoverflow.com/a/52484259
+    false
 }
