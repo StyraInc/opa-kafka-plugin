@@ -12,8 +12,8 @@ Open Policy Agent (OPA) plugin for Kafka authorization.
 
 ## Installation
 
-Put the plugin jar file (`opa-authorizer-1.0-SNAPSHOT-all.jar`) somewhere Kafka recognizes it - this could be directly 
-in Kafkas `libs` directory or in a separate plugin directory pointed out to Kafka at startup, e.g: 
+Put the plugin jar file (`opa-authorizer-1.0-SNAPSHOT-all.jar`) somewhere Kafka recognizes it - this could be directly
+in Kafkas `libs` directory or in a separate plugin directory pointed out to Kafka at startup, e.g:
 
 `CLASSPATH=/usr/local/share/kafka/plugins/*`
 
@@ -108,9 +108,9 @@ size of 512b were used in all tests.
 
 |Test #|Records sent|Payload(b)|records/s|MB/sec|avg latency (ms)|latency avg 50th perc (ms)|latency avg 95th perc (ms)|latency avg 99th perc (ms)|latency avg 99,99 perc (ms)|
 |---|---|---|---|---|---|---|---|---|---|
-|1|102000|666|170|1.11||||||
-|2|102000|330|170|0.05||||||
-|3|102000|1200|170|0.19||||||
+|1|102000|666|170|0.11|4.07|1|2|18|748|
+|2|102000|330|170|0.05|2.03|1|2|18|754|
+|3|102000|1200|170|0.19|2.09|1|2|19|946|
 
 ### ACL test results
 
@@ -132,5 +132,5 @@ size of 512b were used in all tests.
 
 Using gradle wrapper: `./gradlew clean test shadowJar`
 
-The resulting jar (with dependencies embedded) will be named `opa-authorizer-{$VERSION}-all.jar` and stored in 
+The resulting jar (with dependencies embedded) will be named `opa-authorizer-{$VERSION}-all.jar` and stored in
 `build/libs`.
