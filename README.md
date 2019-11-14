@@ -6,14 +6,14 @@ Open Policy Agent (OPA) plugin for Kafka authorization.
 
 ### Prerequisites
 
-* Kafka 2.3.x
+* Kafka 2.3.x (compile from source for other versions)
 * Java 11 or above
 * OPA installed and running on the brokers
 
 ## Installation
 
-Put the plugin jar file (`opa-authorizer-1.0-SNAPSHOT-all.jar`) somewhere Kafka recognizes it - this could be directly
-in Kafkas `libs` directory or in a separate plugin directory pointed out to Kafka at startup, e.g:
+Put the plugin jar file (`opa-authorizer-0.1.0-all.jar`) somewhere Kafka recognizes it - this could be directly 
+in Kafkas `libs` directory or in a separate plugin directory pointed out to Kafka at startup, e.g: 
 
 `CLASSPATH=/usr/local/share/kafka/plugins/*`
 
