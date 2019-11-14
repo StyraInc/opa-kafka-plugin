@@ -11,8 +11,8 @@ allow {
 }
 
 allow {
-	consume
-	on_own_topic
+    consume
+    on_own_topic
     as_consumer
 }
 
@@ -43,15 +43,15 @@ allow {
 # ----------------------------------------------------
 
 inter_broker_communication {
-	input.session.principal.name == "ANONYMOUS"
+    input.session.principal.name == "ANONYMOUS"
 }
 
 consume {
-	input.operation.name == "Read"
+    input.operation.name == "Read"
 }
 
 produce {
-	input.operation.name == "Write"
+    input.operation.name == "Write"
 }
 
 create {
