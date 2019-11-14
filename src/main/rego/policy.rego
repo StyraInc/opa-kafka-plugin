@@ -7,7 +7,7 @@ package kafka.authz
 default allow = false
 
 allow {
-	inter_broker_communication
+    inter_broker_communication
 }
 
 allow {
@@ -17,8 +17,8 @@ allow {
 }
 
 allow {
-	produce
-	on_own_topic
+    produce
+    on_own_topic
     as_producer
 }
 
