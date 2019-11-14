@@ -83,7 +83,7 @@ class AllowCallable(request: Request, opaUrl: URI, allowOnError: Boolean) extend
     } catch {
       case e: JsonProcessingException => logger.warn("Error processing JSON", e)
       case e: ProtocolException => logger.warn("Protocol exception", e)
-      case e: IOException => logger.warn("IO exception when connecting to OPA", e)
+      case e: IOException => logger.warn("IO exception when connecting to OPA: {}", e.getMessage)
     }
     allowOnError
   }
