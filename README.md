@@ -6,22 +6,19 @@ Open Policy Agent (OPA) plugin for Kafka authorization.
 
 ### Prerequisites
 
-* Open Policy Agent (OPA)
-
-## Build from source
-
-Using gradle wrapper: `./gradlew build`.\
+* Kafka 2.3.x
+* Java 11 or above
+* OPA installed and running on the brokers
 
 ## Installation
 
-Put the following JAR files in your plugins directory on the Kafka brokers.
-* `opa-authorizer-1.0-SNAPSHOT.jar`
+Put the plugin jar file (`opa-authorizer-1.0-SNAPSHOT-all.jar`) somewhere Kafka recognizes it - this could be directly 
+in Kafkas `libs` directory or in a separate plugin directory pointed out to Kafka at startup, e.g: 
 
-Include them in the Kafka classpath.
-E.g. `CLASSPATH=/usr/local/share/kafka/plugins/*`
+`CLASSPATH=/usr/local/share/kafka/plugins/*`
 
-To activate the opa-kafka-plugin add the authorizer.class.name to server.properties\
-`authorizer.class.name: com.bisnode.kafka.authorization.OpaAuthorizer`
+To activate the opa-kafka-plugin add the `authorizer.class.name` to server.properties\
+`authorizer.class.name=com.bisnode.kafka.authorization.OpaAuthorizer`
 
 <br />
 The plugin supports the following properties:
@@ -130,3 +127,10 @@ size of 512b were used in all tests.
 |1|102000|666|170| 1.11|1.70|1|2|19|128|
 |2|102000|330|170| 0.05|2.03|1|2|18|298|
 |3|102000|1200|170| 0.19|2.09|1|2|18|332|
+
+## Build from source
+
+Using gradle wrapper: `./gradlew clean test shadowJar`
+
+The resulting jar (with dependencies embedded) will be named `opa-authorizer-{$VERSION}-all.jar` and stored in 
+`build/libs`.
