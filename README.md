@@ -1,4 +1,4 @@
-# opa-kafka-plugin
+#  Open Policy Agent plugin for Kafka authorization 
 ![](https://github.com/Bisnode/opa-kafka-plugin/workflows/build/badge.svg)
 [![codecov](https://codecov.io/gh/Bisnode/opa-kafka-plugin/branch/master/graph/badge.svg)](https://codecov.io/gh/Bisnode/opa-kafka-plugin)
 
