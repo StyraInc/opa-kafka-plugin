@@ -45,7 +45,7 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
   }
 
   override def configure(configs: util.Map[String, _]): Unit = {
-    logger.debug("Call to configure() with config {}", configs)
+    logger.debug(s"Call to configure() with config $configs")
     config = configs.asScala.mapValues(_.asInstanceOf[String]).toMap
   }
 
@@ -61,21 +61,19 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
 
 object AllowCallable {
   private val objectMapper = (new ObjectMapper() with ScalaObjectMapper).registerModule(DefaultScalaModule)
+  private val client = HttpClient.newBuilder.connectTimeout(ofSeconds(5)).build
+  private val requestBuilder = HttpRequest.newBuilder.timeout(ofSeconds(5)).header("Content-Type", "application/json")
 }
 class AllowCallable(request: Request, opaUrl: URI, allowOnError: Boolean) extends Callable[Boolean] with LazyLogging {
   override def call(): Boolean = {
     val reqJson = AllowCallable.objectMapper.writeValueAsString(request)
     logger.debug("Cache miss, querying OPA for decision")
     try {
-      val client = HttpClient.newBuilder.connectTimeout(ofSeconds(5)).build
-      val req = HttpRequest.newBuilder
-        .uri(opaUrl)
-        .timeout(ofSeconds(15))
-        .header("Content-Type", "application/json")
-        .POST(BodyPublishers.ofString(reqJson)).build
+      val req = AllowCallable.requestBuilder.uri(opaUrl).POST(BodyPublishers.ofString(reqJson)).build
 
       logger.trace(s"Querying OPA for object: $reqJson")
-      val resp = client.send(req, BodyHandlers.ofString)
+      val resp = AllowCallable.client.send(req, BodyHandlers.ofString)
+
       logger.trace(s"Response code: ${resp.statusCode}")
       logger.trace(s"Response body: ${resp.body}")
 
@@ -83,7 +81,7 @@ class AllowCallable(request: Request, opaUrl: URI, allowOnError: Boolean) extend
     } catch {
       case e: JsonProcessingException => logger.warn("Error processing JSON", e)
       case e: ProtocolException => logger.warn("Protocol exception", e)
-      case e: IOException => logger.warn("IO exception when connecting to OPA: {}", e.getMessage)
+      case e: IOException => logger.warn(s"IO exception when connecting to OPA: ${e.getMessage}")
     }
     allowOnError
   }
