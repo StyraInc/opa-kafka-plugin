@@ -20,7 +20,7 @@ object OpaAuthorizerBenchmark {
 
     val numCalls = 10000
 
-    for( _ <- 1 until numCalls){
+    for (_ <- 1 until numCalls) {
       val input = benchmark.createRequest.input
       benchmark.getAuthorizer.authorize(input.session, input.operation, input.resource)
     }
