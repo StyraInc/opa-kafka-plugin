@@ -20,7 +20,7 @@ import org.scalatest.junit.JUnitRunner
  * NOTE: Requires a running OPA instance with the provided policy loaded
  */
 @RunWith(classOf[JUnitRunner])
-class OpaAuthorizerSpec extends FlatSpec with Matchers {
+class OpaAuthorizerSpec extends FlatSpec with Matchers with PrivateMethodTester {
 
   private val opaUrl = "http://localhost:8181/v1/data/kafka/authz/allow"
   private val objectMapper = (new ObjectMapper() with ScalaObjectMapper).registerModule(DefaultScalaModule)
@@ -39,7 +39,6 @@ class OpaAuthorizerSpec extends FlatSpec with Matchers {
   "Request object" should "serialize to JSON" in {
     val request = createRequest("bob", "bob-topic", Read)
 
-
     objectMapper.writeValueAsString(request) should not be "{}"
   }
 
@@ -49,6 +48,7 @@ class OpaAuthorizerSpec extends FlatSpec with Matchers {
     val input = request.input
 
     opaAuthorizer.authorize(input.session, input.operation, input.resource) should be (true)
+    opaAuthorizer.getCache.size should be (1)
   }
 
   "OpaAuthorizer" should "not authorize when username does not match name of topic" in {
@@ -57,6 +57,7 @@ class OpaAuthorizerSpec extends FlatSpec with Matchers {
     val input = request.input
 
     opaAuthorizer.authorize(input.session, input.operation, input.resource) should be (false)
+    opaAuthorizer.getCache.size should be (1)
   }
 
   "OpaAuthorizer" should "not authorize read request for producer" in {
@@ -65,6 +66,7 @@ class OpaAuthorizerSpec extends FlatSpec with Matchers {
     val input = request.input
 
     opaAuthorizer.authorize(input.session, input.operation, input.resource) should be (false)
+    opaAuthorizer.getCache.size should be (1)
   }
 
   "OpaAuthorizer" should "not authorize write request for consumer" in {
@@ -73,12 +75,43 @@ class OpaAuthorizerSpec extends FlatSpec with Matchers {
     val input = request.input
 
     opaAuthorizer.authorize(input.session, input.operation, input.resource) should be (false)
+    opaAuthorizer.getCache.size should be (1)
   }
 
-  def setupAuthorizer(): OpaAuthorizer = {
+  "OpaAuthorizer" should "cache the first request" in {
+    val opaAuthorizer = setupAuthorizer()
+    val request = createRequest("alice-consumer", "alice-topic", Read)
+    val input = request.input
+
+    for (_ <- 1 until 5) {
+      opaAuthorizer.authorize(input.session, input.operation, input.resource) should be (true)
+    }
+
+    opaAuthorizer.getCache.size should be (1)
+
+    val otherRequest = createRequest("bob-consumer", "bob-topic", Read)
+    val nextInput = otherRequest.input
+
+    for (_ <- 1 until 5) {
+      opaAuthorizer.authorize(nextInput.session, nextInput.operation, nextInput.resource) should be(true)
+    }
+
+    opaAuthorizer.getCache.size should be (2)
+  }
+
+  "OpaAuthorizer" should "not cache decisions while errors occur" in {
+    val opaAuthorizer = setupAuthorizer("http://localhost/broken")
+    val request = createRequest("alice-consumer", "alice-topic", Write)
+    val input = request.input
+
+    opaAuthorizer.authorize(input.session, input.operation, input.resource) should be (false)
+    opaAuthorizer.getCache.size should be (0)
+  }
+
+  def setupAuthorizer(url: String = opaUrl): OpaAuthorizer = {
     val opaAuthorizer = new OpaAuthorizer()
     val config = new java.util.HashMap[String, String]
-    config.put("opa.authorizer.url", opaUrl)
+    config.put("opa.authorizer.url", url)
     config.put("opa.authorizer.allow.on.error", "false")
     opaAuthorizer.configure(config)
     opaAuthorizer

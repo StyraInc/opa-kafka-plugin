@@ -10,6 +10,8 @@ import java.util.concurrent.{Callable, ExecutionException, TimeUnit}
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.{DefaultScalaModule, ScalaObjectMapper}
+import com.google.common.annotations.VisibleForTesting
+import com.google.common.base.Throwables
 import com.google.common.cache.{Cache, CacheBuilder}
 import com.typesafe.scalalogging.LazyLogging
 import kafka.network.RequestChannel
@@ -37,7 +39,7 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
     try cache.get(request, new AllowCallable(request, opaUrl, allowOnError))
     catch {
       case e: ExecutionException =>
-        logger.warn("Exception in decision retrieval", e.getCause)
+        logger.warn(s"Exception in decision retrieval: ${e.getMessage}")
         logger.trace("Exception trace", e)
         allowOnError
     }
@@ -47,6 +49,9 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
     logger.debug(s"Call to configure() with config $configs")
     config = configs.asScala.mapValues(_.asInstanceOf[String]).toMap
   }
+
+  @VisibleForTesting
+  private[authorization] def getCache = cache
 
   // None of the below needs implementations here
   override def addAcls(acls: Set[Acl], resource: Resource): Unit = ???
