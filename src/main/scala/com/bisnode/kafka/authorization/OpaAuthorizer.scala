@@ -1,15 +1,13 @@
 package com.bisnode.kafka.authorization
 
-import java.io.IOException
 import java.net.http.HttpRequest.BodyPublishers
 import java.net.http.HttpResponse.BodyHandlers
 import java.net.http.{HttpClient, HttpRequest}
-import java.net.{ProtocolException, URI, URL}
+import java.net.{URI, URL}
 import java.time.Duration.ofSeconds
 import java.util
 import java.util.concurrent.{Callable, ExecutionException, TimeUnit}
 
-import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.{DefaultScalaModule, ScalaObjectMapper}
 import com.google.common.cache.{Cache, CacheBuilder}
@@ -28,8 +26,8 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
   private lazy val allowOnError = config.getOrElse("opa.authorizer.allow.on.error", "false").toBoolean
 
   private lazy val cache = CacheBuilder.newBuilder
-    .initialCapacity(config.getOrElse("opa.authorizer.cache.initial.capacity", "128").toInt)
-    .maximumSize(config.getOrElse("opa.authorizer.cache.maximum.size", "512").toInt)
+    .initialCapacity(config.getOrElse("opa.authorizer.cache.initial.capacity", "5000").toInt)
+    .maximumSize(config.getOrElse("opa.authorizer.cache.maximum.size", "50000").toInt)
     .expireAfterWrite(config.getOrElse("opa.authorizer.cache.expire.after.seconds", "3600").toInt, TimeUnit.SECONDS)
     .build
     .asInstanceOf[Cache[Request, Boolean]]
@@ -39,7 +37,8 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
     try cache.get(request, new AllowCallable(request, opaUrl, allowOnError))
     catch {
       case e: ExecutionException =>
-        logger.warn("Exception in cache retrieval", e)
+        logger.warn("Exception in decision retrieval", e.getCause)
+        logger.trace("Exception trace", e)
         allowOnError
     }
   }
@@ -66,24 +65,15 @@ object AllowCallable {
 }
 class AllowCallable(request: Request, opaUrl: URI, allowOnError: Boolean) extends Callable[Boolean] with LazyLogging {
   override def call(): Boolean = {
-    val reqJson = AllowCallable.objectMapper.writeValueAsString(request)
     logger.debug("Cache miss, querying OPA for decision")
-    try {
-      val req = AllowCallable.requestBuilder.uri(opaUrl).POST(BodyPublishers.ofString(reqJson)).build
+    val reqJson = AllowCallable.objectMapper.writeValueAsString(request)
+    val req = AllowCallable.requestBuilder.uri(opaUrl).POST(BodyPublishers.ofString(reqJson)).build
 
-      logger.trace(s"Querying OPA for object: $reqJson")
-      val resp = AllowCallable.client.send(req, BodyHandlers.ofString)
+    logger.trace(s"Querying OPA for object: $reqJson")
+    val resp = AllowCallable.client.send(req, BodyHandlers.ofString)
+    logger.trace(s"Response code: ${resp.statusCode}, body: ${resp.body}")
 
-      logger.trace(s"Response code: ${resp.statusCode}")
-      logger.trace(s"Response body: ${resp.body}")
-
-      return AllowCallable.objectMapper.readTree(resp.body()).at("/result").asBoolean
-    } catch {
-      case e: JsonProcessingException => logger.warn("Error processing JSON", e)
-      case e: ProtocolException => logger.warn("Protocol exception", e)
-      case e: IOException => logger.warn(s"IO exception when connecting to OPA: ${e.getMessage}")
-    }
-    allowOnError
+    AllowCallable.objectMapper.readTree(resp.body()).at("/result").asBoolean
   }
 }
 
