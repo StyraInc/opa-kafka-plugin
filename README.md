@@ -13,7 +13,7 @@ Open Policy Agent (OPA) plugin for Kafka authorization.
 ## Installation
 
 Download the latest [OPA authorizer plugin](https://github.com/Bisnode/opa-kafka-plugin/releases/) jar and put the
-file (`opa-authorizer-0.2.0-all.jar`) somewhere Kafka recognizes it - this could be directly  in Kafkas `libs` directory
+file (`opa-authorizer-{$VERSION}-all.jar`) somewhere Kafka recognizes it - this could be directly  in Kafkas `libs` directory
 or in a separate plugin directory pointed out to Kafka at startup, e.g: 
 
 `CLASSPATH=/usr/local/share/kafka/plugins/*`
@@ -24,13 +24,13 @@ To activate the opa-kafka-plugin add the `authorizer.class.name` to server.prope
 <br />
 The plugin supports the following properties:
 
-| Property Key | Example | Description |
-| --- | --- | --- |
-| `opa.authorizer.url` | `http://opa:8181/v1/data/kafka/authz/allow` | Name of the OPA policy to query. |
-| `opa.authorizer.allow.on.error` | `false` | Fail-closed or fail-open if OPA call fails. |
-| `opa.authorizer.cache.initial.capacity` | `100` | Initial decision cache size. |
-| `opa.authorizer.cache.maximum.size` | `100` | Max decision cache size. |
-| `opa.authorizer.cache.expire.after.ms` | `600000` | Decision cache expiry in milliseconds. |
+| Property Key | Example | Default | Description |
+| --- | --- | --- | --- |
+| `opa.authorizer.url` | `http://opa:8181/v1/data/kafka/authz/allow` |  | Name of the OPA policy to query. [required] |
+| `opa.authorizer.allow.on.error` | `false` | `false` | Fail-closed or fail-open if OPA call fails. |
+| `opa.authorizer.cache.initial.capacity` | `5000` | `5000` | Initial decision cache size. |
+| `opa.authorizer.cache.maximum.size` | `50000` | `50000` | Max decision cache size. |
+| `opa.authorizer.cache.expire.after.seconds` | `3600` | `3600` | Decision cache expiry in milliseconds. |
 
 ## Usage
 
@@ -135,3 +135,11 @@ Using gradle wrapper: `./gradlew clean test shadowJar`
 
 The resulting jar (with dependencies embedded) will be named `opa-authorizer-{$VERSION}-all.jar` and stored in
 `build/libs`.
+
+## Logging
+
+Set log level `log4j.logger.com.bisnode=INFO` in `config/log4j.properties`
+Use DEBUG or TRACE for debugging.
+
+In a busy Kafka cluster it might be good to tweak the cache since it may produce a lot of log entries in Open Policy Agent, especially if decision logs are turned on. If the policy isn't dynamically updated very often it's recommended to cache a lot to improve performance and reduce the amount of log entries.
+
