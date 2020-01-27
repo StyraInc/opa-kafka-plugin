@@ -30,7 +30,7 @@ The plugin supports the following properties:
 | `opa.authorizer.allow.on.error` | `false` | `false` | Fail-closed or fail-open if OPA call fails. |
 | `opa.authorizer.cache.initial.capacity` | `5000` | `5000` | Initial decision cache size. |
 | `opa.authorizer.cache.maximum.size` | `50000` | `50000` | Max decision cache size. |
-| `opa.authorizer.cache.expire.after.seconds` | `3600` | `3600` | Decision cache expiry in milliseconds. |
+| `opa.authorizer.cache.expire.after.seconds` | `3600` | `3600` | Decision cache expiry in seconds. |
 
 ## Usage
 
