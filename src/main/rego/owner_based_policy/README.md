@@ -9,4 +9,4 @@ topic `alice-topic1`, depending on the user type.
 
 # Tests
 
-See [policy tests](../../test/rego/README.md)
+See [policy tests](../../test/rego/owner_based_policy/README.md)

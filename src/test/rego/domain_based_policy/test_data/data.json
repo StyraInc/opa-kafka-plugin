@@ -1,0 +1,48 @@
+{
+    "user_permissions": {
+        "abc.user1": {
+            "allowed_consume": [
+                "xyz.topic1.xyz"
+            ],
+            "allowed_produce": [
+                "xyz.topic2.xyz"
+            ],
+            "denied_consume": [
+                "xyz.topic3.abc"
+            ],
+            "denied_produce": [
+                "abc.topic4.xyz"
+            ]
+        },
+        "abc.user2": {
+            "allowed_consume": [
+                "xyz.topic.*.xyz"
+            ],
+            "allowed_produce": [
+                "xyz.topic.*.xyz"
+            ],
+            "denied_consume": [
+                "xyz.topic.*.abc"
+            ],
+            "denied_produce": [
+                "abc.topic.*.xyz"
+            ]
+        }
+    },
+    "topic_permissions": {
+        "xyz.topic5.xyz": {
+            "allowed_consume": [
+                "abc"
+            ],
+            "allowed_produce": [
+                "abc"
+            ],
+            "denied_consume": [
+                "xyz"
+            ],
+            "denied_produce": [
+                "xyz"
+            ]
+        }
+    }
+}
