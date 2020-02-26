@@ -48,7 +48,7 @@ allow {
 inter_broker_communication {
     # If inter-broker communication is unauthenticated
     # they will come with username ANONYMOUS. Make sure to protect
-    # this using network rules, or concider having authenticated
+    # this using network rules, or consider having authenticated
     # brokers.
     input.session.sanitizedUser == "ANONYMOUS"
 }

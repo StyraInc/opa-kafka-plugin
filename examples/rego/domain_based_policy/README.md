@@ -1,7 +1,7 @@
 # Policy sample
 
-This sample is meant for more dynamic Kafka environments where topics comes and goes.
-It got a standard policy that can be used by following a domain based naming convention on topics and users, but also supports custom data to extend this policy with whitelisting and blacklisting.
+This sample is meant for more dynamic Kafka environments where topics come and go.
+It has got a standard policy that can be used by following a domain based naming convention on topics and users, but also supports custom data to extend this policy with whitelisting and blacklisting.
 
 ## Default policy
 
@@ -18,7 +18,7 @@ Describe operations are always permitted.
 
 ## Custom data
 
-In some cases where the default policy isn't enough it can be extended using custom data. Known usecases where the standard policy is lacking is if we want to have consumers from two or more different domains on the same topic. If we want producers from different domains to the same topic, or if we want to disallow a group of users within a domain that would normally be able to consume/produce a topic.
+In some cases where the default policy isn't enough it can be extended using custom data. Known use cases where the standard policy is lacking is if we want to have consumers from two or more different domains on the same topic. If we want producers from different domains to the same topic, or if we want to disallow a group of users within a domain that would normally be able to consume/produce a topic.
 
 ### Custom data structure example:
 ```
@@ -75,4 +75,4 @@ In some cases where the default policy isn't enough it can be extended using cus
 
 # Tests
 
-See [policy tests](../../test/rego/domain_based_policy/README.md)
+`opa test ./ test/`
