@@ -33,4 +33,5 @@ jobs:
           token: ${{secrets.CODECOV_TOKEN}}
           file: ./build/reports/opa/opa-codecov-coverage.json
           name: opa-policies
-
+      - name: Test example rego domain_based_policy
+        run: opa test ./examples/rego/domain_based_policy/policy.rego ./examples/rego/domain_based_policy/test/
