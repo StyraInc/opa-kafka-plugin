@@ -108,11 +108,28 @@ class OpaAuthorizerSpec extends FlatSpec with Matchers with PrivateMethodTester 
     opaAuthorizer.getCache.size should be (0)
   }
 
+  "OpaAuthorizer" should "authorize super users without checking with OPA" in {
+    val opaAuthorizer = setupAuthorizer(opaUrl)
+
+    val resource = Resource(Topic, "alice-topic", PatternType.LITERAL)
+    val operation = Write
+
+    val session1 = Session(new KafkaPrincipal("User", "CN=my-user"), InetAddress.getLoopbackAddress)
+    opaAuthorizer.authorize(session1, operation, resource) should be (true)
+
+    val session2 = Session(new KafkaPrincipal("User", "CN=my-user2,O=my-org"), InetAddress.getLoopbackAddress)
+    opaAuthorizer.authorize(session2, operation, resource) should be (true)
+
+    val session3 = Session(new KafkaPrincipal("User", "CN=my-user3"), InetAddress.getLoopbackAddress)
+    opaAuthorizer.authorize(session3, operation, resource) should be (false)
+  }
+
   def setupAuthorizer(url: String = opaUrl): OpaAuthorizer = {
     val opaAuthorizer = new OpaAuthorizer()
     val config = new java.util.HashMap[String, String]
     config.put("opa.authorizer.url", url)
     config.put("opa.authorizer.allow.on.error", "false")
+    config.put("super.users", "User:CN=my-user;User:CN=my-user2,O=my-org")
     opaAuthorizer.configure(config)
     opaAuthorizer
   }

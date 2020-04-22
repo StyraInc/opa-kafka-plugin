@@ -11,7 +11,6 @@ import java.util.concurrent.{Callable, ExecutionException, TimeUnit}
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.{DefaultScalaModule, ScalaObjectMapper}
 import com.google.common.annotations.VisibleForTesting
-import com.google.common.base.Throwables
 import com.google.common.cache.{Cache, CacheBuilder}
 import com.typesafe.scalalogging.LazyLogging
 import kafka.network.RequestChannel
@@ -26,6 +25,7 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
   private var config: Map[String, String] = Map.empty
   private lazy val opaUrl = new URL(config("opa.authorizer.url")).toURI
   private lazy val allowOnError = config.getOrElse("opa.authorizer.allow.on.error", "false").toBoolean
+  private lazy val superUsers = config.getOrElse("super.users", "").split(";").toList
 
   private lazy val cache = CacheBuilder.newBuilder
     .initialCapacity(config.getOrElse("opa.authorizer.cache.initial.capacity", "5000").toInt)
@@ -35,6 +35,11 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
     .asInstanceOf[Cache[Request, Boolean]]
 
   override def authorize(session: RequestChannel.Session, operation: Operation, resource: Resource): Boolean = {
+    if (superUsers.contains(session.principal.toString)) {
+      logger.trace(s"User ${session.principal} is super user")
+      return true
+    }
+
     val request = Request(Input(session, operation, resource))
     try cache.get(request, new AllowCallable(request, opaUrl, allowOnError))
     catch {
