@@ -1,12 +1,21 @@
 plugins {
     id 'scala'
     id 'jacoco'
+    id 'signing'
+    id 'maven-publish'
     id 'com.github.johnrengelman.shadow' version '5.1.0'
     id 'com.bisnode.opa' version '0.1.1'
 }
 
-group 'com.bisnode.kafka.opa'
+group 'com.bisnode.kafka.authorization'
 version '0.4.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+    withJavadocJar()
+    withSourcesJar()
+}
 
 repositories {
     mavenCentral()
@@ -40,6 +49,74 @@ jacocoTestReport {
         xml.enabled true
         html.enabled false
     }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            groupId ='com.bisnode.kafka.authorization'
+            artifactId = 'opa-authorizer'
+            version = '0.4.0'
+
+            from components.java
+
+            pom {
+                name = 'Open Policy Agent plugin for Kafka authorization'
+                description = 'Open Policy Agent (OPA) plugin for Kafka authorization.'
+                url = 'https://github.com/Bisnode/opa-kafka-plugin'
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        name = 'Anders Eknert'
+                        email = 'anders.eknert@bisnode.com'
+                        organization = 'Bisnode'
+                        organizationUrl = 'https://www.bisnode.com'
+                    }
+                    developer {
+                        name = 'Daniel Olsson'
+                        email = 'daniel.olsson@bisnode.com'
+                        organization = 'Bisnode'
+                        organizationUrl = 'https://www.bisnode.com'
+                    }
+                    developer {
+                        name = 'Łukasz Kamiński'
+                        email = 'lukasz.kaminski@bisnode.com'
+                        organization = 'Bisnode'
+                        organizationUrl = 'https://www.bisnode.com'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git://github.com/Bisnode/opa-kafka-plugin.git'
+                    developerConnection = 'scm:git:ssh://github.com/Bisnode/opa-kafka-plugin.git'
+                    url = 'https://github.com/Bisnode/opa-kafka-plugin.git'
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = 'OSSRH'
+            credentials {
+                username = System.getenv('OSSRH_USERNAME')
+                password = System.getenv('OSSRH_PASSWORD')
+            }
+            def releasesRepoUrl = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+            def snapshotsRepoUrl = 'https://oss.sonatype.org/content/repositories/snapshots'
+            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+        }
+    }
+}
+
+signing {
+    def signingKey = new String(System.getenv("SIGNING_KEY")?.decodeBase64() ?: '')
+    def signingPassword = System.getenv("SIGNING_PASSWORD")
+    useInMemoryPgpKeys(signingKey, signingPassword)
+    sign publishing.publications.mavenJava
 }
 
 check.dependsOn(testRego, testRegoCoverage)
