@@ -8,7 +8,7 @@ plugins {
 }
 
 group 'com.bisnode.kafka.authorization'
-version '0.4.0'
+version '0.4.1'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_11
@@ -56,7 +56,7 @@ publishing {
         mavenJava(MavenPublication) {
             groupId ='com.bisnode.kafka.authorization'
             artifactId = 'opa-authorizer'
-            version = '0.4.0'
+            version = '0.4.1'
 
             from components.java
 
@@ -113,8 +113,8 @@ publishing {
 }
 
 signing {
-    def signingKey = new String(System.getenv("SIGNING_KEY")?.decodeBase64() ?: '')
-    def signingPassword = System.getenv("SIGNING_PASSWORD")
+    def signingKey = new String(System.getenv('SIGNING_KEY')?.decodeBase64() ?: '')
+    def signingPassword = System.getenv('SIGNING_PASSWORD')
     useInMemoryPgpKeys(signingKey, signingPassword)
     sign publishing.publications.mavenJava
 }
