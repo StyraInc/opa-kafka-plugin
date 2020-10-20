@@ -1,4 +1,5 @@
 #  Open Policy Agent plugin for Kafka authorization 
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.bisnode.kafka.authorization/opa-authorizer/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.bisnode.kafka.authorization/opa-authorizer)
 ![](https://github.com/Bisnode/opa-kafka-plugin/workflows/build/badge.svg)
 [![codecov](https://codecov.io/gh/Bisnode/opa-kafka-plugin/branch/master/graph/badge.svg)](https://codecov.io/gh/Bisnode/opa-kafka-plugin)
 
@@ -12,8 +13,10 @@ Open Policy Agent (OPA) plugin for Kafka authorization.
 
 ## Installation
 
-Download the latest [OPA authorizer plugin](https://github.com/Bisnode/opa-kafka-plugin/releases/) jar and put the
-file (`opa-authorizer-{$VERSION}-all.jar`) somewhere Kafka recognizes it - this could be directly  in Kafkas `libs` directory
+### 
+
+Download the latest OPA authorizer plugin jar from [Releases](https://github.com/Bisnode/opa-kafka-plugin/releases/) (or [Maven Central](https://search.maven.org/artifact/com.bisnode.kafka.authorization/opa-authorizer)) and put the
+file (`opa-authorizer-{$VERSION}.jar`) somewhere Kafka recognizes it - this could be directly  in Kafkas `libs` directory
 or in a separate plugin directory pointed out to Kafka at startup, e.g: 
 
 `CLASSPATH=/usr/local/share/kafka/plugins/*`
