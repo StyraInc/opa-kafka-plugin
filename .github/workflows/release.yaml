@@ -16,6 +16,8 @@ jobs:
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
         with:
-          arguments: publishAllPublicationsToOSSRHRepository -PossrhUsername=${{ secrets.OSSRH_USERNAME }} -PossrhPassword=${{ secrets.OSSRH_PASSWORD }} -Dorg.gradle.internal.publish.checksums.insecure=true
+          arguments: publishAllPublicationsToOSSRHRepository -PossrhUsername=$OSSRH_USERNAME -PossrhPassword=$OSSRH_PASSWORD -Dorg.gradle.internal.publish.checksums.insecure=true
 
