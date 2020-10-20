@@ -1,4 +1,11 @@
 name: release
+env:
+  SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+  SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+  OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+  OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+  FIRST_NAME: Mona
+  LAST_NAME: Octocat
 on:
   push:
     tags:
@@ -14,8 +21,8 @@ jobs:
           java-version: 11
       - uses: eskatos/gradle-command-action@v1
         env:
-          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+          SIGNING_KEY: $SIGNING_KEY
+          SIGNING_PASSWORD: $SIGNING_PASSWORD
         with:
-          arguments: publishAllPublicationsToOSSRHRepository -PossrhUsername=${{ secrets.OSSRH_USERNAME }} -PossrhPassword=${{ secrets.OSSRH_PASSWORD }} -Dorg.gradle.internal.publish.checksums.insecure=true
+          arguments: publishAllPublicationsToOSSRHRepository -PossrhUsername=$OSSRH_USERNAME -PossrhPassword=$OSSRH_PASSWORD -Dorg.gradle.internal.publish.checksums.insecure=true
 
