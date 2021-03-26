@@ -17,3 +17,6 @@ atlassian-ide-plugin.xml
 *.rar
 hs_err_pid*
 
+.metals
+.project
+.bloop

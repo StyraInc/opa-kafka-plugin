@@ -6,181 +6,289 @@ package kafka.authz
 
 # Brokers
 test_inter_broker_communication {
-    allow
-        with input.session.principal.name as "ANONYMOUS"
+	allow with input.requestContext.principal.name as "ANONYMOUS"
 }
 
 # Consumers
 test_consume_own_topic_as_consumer {
-    allow
-        with input.operation.name as "Read"
-        with input.session.principal.name as "alice-consumer"
-        with input.resource.name as "alice-mytopic"
+	allow with input.requestContext.principal.name as "alice-consumer"
+		 with input.action as {
+			"operation": "READ",
+			"resourcePattern": {
+				"name": "alice-mytopic",
+				"resourceType": "TOPIC",
+			},
+		}
 }
+
 test_create_own_topic_as_consumer {
-    allow
-        with input.operation.name as "Create"
-        with input.session.principal.name as "alice-consumer"
-        with input.resource.name as "alice-topic1"
+	allow with input.requestContext.principal.name as "alice-consumer"
+		 with input.action as {
+			"operation": "CREATE",
+			"resourcePattern": {
+				"name": "alice-topic1",
+				"resourceType": "TOPIC",
+			},
+		}
 }
 
 # Producers
 test_produce_own_topic_as_producer {
-    allow
-        with input.operation.name as "Write"
-        with input.session.principal.name as "alice-producer"
-        with input.resource.name as "alice-mytopic"
+	allow with input.requestContext.principal.name as "alice-producer"
+		 with input.action as {
+			"operation": "WRITE",
+			"resourcePattern": {
+				"name": "alice-mytopic",
+				"resourceType": "TOPIC",
+			},
+		}
 }
 
 test_create_own_topic_as_producer {
-    allow
-        with input.operation.name as "Create"
-        with input.session.principal.name as "alice-producer"
-        with input.resource.name as "alice-topic1"
+	allow with input.requestContext.principal.name as "alice-producer"
+		 with input.action as {
+			"operation": "CREATE",
+			"resourcePattern": {
+				"name": "alice-topic1",
+				"resourceType": "TOPIC",
+			},
+		}
 }
 
 # Global access
 test_anyone_describe_some_topic {
-    allow
-        with input.operation.name as "Describe"
-        with input.session.principal.name as "alice-producer"
-        with input.resource.name as "some-mytopic"
+	allow with input.requestContext.principal.name as "alice-producer"
+		 with input.action as {
+			"operation": "DESCRIBE",
+			"resourcePattern": {
+				"name": "some-mytopic",
+				"resourceType": "TOPIC",
+			},
+		}
 }
+
 test_anyone_describe_own_topic {
-    allow
-        with input.operation.name as "Describe"
-        with input.session.principal.name as "alice-producer"
-        with input.resource.name as "alice-mytopic"
+	allow with input.requestContext.principal.name as "alice-producer"
+		 with input.action as {
+			"operation": "DESCRIBE",
+			"resourcePattern": {
+				"name": "alice-mytopic",
+				"resourceType": "TOPIC",
+			},
+		}
 }
 
 # MGMT User tests
 test_mgmt_user_own_topic_read {
-    allow
-        with input.operation.name as "Read"
-        with input.session.principal.name as "alice-mgmt"
-        with input.resource.name as "alice-topic1"
-}
-test_mgmt_user_own_topic_write {
-    allow
-        with input.operation.name as "Write"
-        with input.session.principal.name as "alice-mgmt"
-        with input.resource.name as "alice-topic1"
-}
-test_mgmt_user_own_topic_create {
-    allow
-        with input.operation.name as "Create"
-        with input.session.principal.name as "alice-mgmt"
-        with input.resource.name as "alice-topic1"
-}
-test_mgmt_user_own_topic_delete {
-    allow
-        with input.operation.name as "Delete"
-        with input.session.principal.name as "alice-mgmt"
-        with input.resource.name as "alice-topic1"
-}
-test_mgmt_user_own_topic_describe {
-    allow
-        with input.operation.name as "Describe"
-        with input.session.principal.name as "alice-mgmt"
-        with input.resource.name as "alice-topic1"
-}
-test_mgmt_user_own_topic_alter {
-    allow
-        with input.operation.name as "Alter"
-        with input.session.principal.name as "alice-mgmt"
-        with input.resource.name as "alice-topic1"
+	allow with input.requestContext.principal.name as "alice-mgmt"
+		 with input.action as {
+			"operation": "READ",
+			"resourcePattern": {
+				"name": "alice-topic1",
+				"resourceType": "TOPIC",
+			},
+		}
 }
 
+test_mgmt_user_own_topic_write {
+	allow with input.requestContext.principal.name as "alice-mgmt"
+		 with input.action as {
+			"operation": "WRITE",
+			"resourcePattern": {
+				"name": "alice-topic1",
+				"resourceType": "TOPIC",
+			},
+		}
+}
+
+test_mgmt_user_own_topic_create {
+	allow with input.requestContext.principal.name as "alice-mgmt"
+		 with input.action as {
+			"operation": "CREATE",
+			"resourcePattern": {
+				"name": "alice-topic1",
+				"resourceType": "TOPIC",
+			},
+		}
+}
+
+test_mgmt_user_own_topic_delete {
+	allow with input.requestContext.principal.name as "alice-mgmt"
+		 with input.action as {
+			"operation": "DELETE",
+			"resourcePattern": {
+				"name": "alice-topic1",
+				"resourceType": "TOPIC",
+			},
+		}
+}
+
+test_mgmt_user_own_topic_describe {
+	allow with input.requestContext.principal.name as "alice-mgmt"
+		 with input.action as {
+			"operation": "DESCRIBE",
+			"resourcePattern": {
+				"name": "alice-topic1",
+				"resourceType": "TOPIC",
+			},
+		}
+}
+
+test_mgmt_user_own_topic_alter {
+	allow with input.requestContext.principal.name as "alice-mgmt"
+		 with input.action as {
+			"operation": "ALTER",
+			"resourcePattern": {
+				"name": "alice-topic1",
+				"resourceType": "TOPIC",
+			},
+		}
+}
 
 # --------------------------------------------------
 #   Negative test
 # --------------------------------------------------
 
 test_consume_own_topic_as_producer {
-    not allow
-        with input.operation.name as "Read"
-        with input.session.principal.name as "alice-producer"
-        with input.resource.name as "alice-mytopic"
+	not allow with input.requestContext.principal.name as "alice-producer"
+		 with input.action as {
+			"operation": "READ",
+			"resourcePattern": {
+				"name": "alice-mytopic",
+				"resourceType": "TOPIC",
+			},
+		}
 }
 
 test_consume_someone_elses_topic_as_producer {
-    not allow
-        with input.operation.name as "Read"
-        with input.session.principal.name as "alice-producer"
-        with input.resource.name as "someone-mytopic"
+	not allow with input.requestContext.principal.name as "alice-producer"
+		 with input.action as {
+			"operation": "READ",
+			"resourcePattern": {
+				"name": "someone-mytopic",
+				"resourceType": "TOPIC",
+			},
+		}
 }
 
 test_consume_someone_elses_topic_as_consumer {
-    not allow
-        with input.operation.name as "Read"
-        with input.session.principal.name as "alice-consumer"
-        with input.resource.name as "someone-mytopic"
+	not allow with input.requestContext.principal.name as "alice-consumer"
+		 with input.action as {
+			"operation": "READ",
+			"resourcePattern": {
+				"name": "someone-mytopic",
+				"resourceType": "TOPIC",
+			},
+		}
 }
 
 test_produce_own_topic_as_consumer {
-    not allow
-        with input.operation.name as "Write"
-        with input.session.principal.name as "alice-consumer"
-        with input.resource.name as "alice-mytopic"
+	not allow with input.requestContext.principal.name as "alice-consumer"
+		 with input.action as {
+			"operation": "WRITE",
+			"resourcePattern": {
+				"name": "alice-mytopic",
+				"resourceType": "TOPIC",
+			},
+		}
 }
 
 test_produce_someone_elses_topic_as_consumer {
-    not allow
-        with input.operation.name as "Write"
-        with input.session.principal.name as "alice-consumer"
-        with input.resource.name as "someone-mytopic"
+	not allow with input.requestContext.principal.name as "alice-consumer"
+		 with input.action as {
+			"operation": "WRITE",
+			"resourcePattern": {
+				"name": "someone-mytopic",
+				"resourceType": "TOPIC",
+			},
+		}
 }
 
 test_produce_someone_elses_topic_as_producer {
-    not allow
-        with input.operation.name as "Write"
-        with input.session.principal.name as "alice-producer"
-        with input.resource.name as "someone-mytopic"
+	not allow with input.requestContext.principal.name as "alice-producer"
+		 with input.action as {
+			"operation": "WRITE",
+			"resourcePattern": {
+				"name": "someone-mytopic",
+				"resourceType": "TOPIC",
+			},
+		}
 }
 
 test_create_someone_elses_topic_as_producer {
-    not allow
-        with input.operation.name as "Create"
-        with input.session.principal.name as "alice-producer"
-        with input.resource.name as "someone-topic1"
+	not allow with input.requestContext.principal.name as "alice-producer"
+		 with input.action as {
+			"operation": "CREATE",
+			"resourcePattern": {
+				"name": "someone-topic1",
+				"resourceType": "TOPIC",
+			},
+		}
 }
 
 test_create_someone_elses_topic_as_consumer {
-    not allow
-        with input.operation.name as "Create"
-        with input.session.principal.name as "alice-producer"
-        with input.resource.name as "someone-topic1"
+	not allow with input.requestContext.principal.name as "alice-producer"
+		 with input.action as {
+			"operation": "CREATE",
+			"resourcePattern": {
+				"name": "someone-topic1",
+				"resourceType": "TOPIC",
+			},
+		}
 }
-
 
 # MGMT User tests
 test_mgmt_user_other_topic_read {
-    not allow
-        with input.operation.name as "Read"
-        with input.session.principal.name as "alice-mgmt"
-        with input.resource.name as "some-topic1"
+	not allow with input.requestContext.principal.name as "alice-mgmt"
+		 with input.action as {
+			"operation": "READ",
+			"resourcePattern": {
+				"name": "some-topic1",
+				"resourceType": "TOPIC",
+			},
+		}
 }
+
 test_mgmt_user_other_topic_write {
-    not allow
-        with input.operation.name as "Write"
-        with input.session.principal.name as "alice-mgmt"
-        with input.resource.name as "some-topic1"
+	not allow with input.requestContext.principal.name as "alice-mgmt"
+		 with input.action as {
+			"operation": "WRITE",
+			"resourcePattern": {
+				"name": "some-topic1",
+				"resourceType": "TOPIC",
+			},
+		}
 }
+
 test_mgmt_user_other_topic_create {
-    not allow
-        with input.operation.name as "Create"
-        with input.session.principal.name as "alice-mgmt"
-        with input.resource.name as "some-topic1"
+	not allow with input.requestContext.principal.name as "alice-mgmt"
+		 with input.action as {
+			"operation": "CREATE",
+			"resourcePattern": {
+				"name": "some-topic1",
+				"resourceType": "TOPIC",
+			},
+		}
 }
+
 test_mgmt_user_other_topic_delete {
-    not allow
-        with input.operation.name as "Delete"
-        with input.session.principal.name as "alice-mgmt"
-        with input.resource.name as "some-topic1"
+	not allow with input.requestContext.principal.name as "alice-mgmt"
+		 with input.action as {
+			"operation": "DELETE",
+			"resourcePattern": {
+				"name": "some-topic1",
+				"resourceType": "TOPIC",
+			},
+		}
 }
+
 test_mgmt_user_other_topic_alter {
-    not allow
-        with input.operation.name as "Alter"
-        with input.session.principal.name as "alice-mgmt"
-        with input.resource.name as "some-topic1"
+	not allow with input.requestContext.principal.name as "alice-mgmt"
+		 with input.action as {
+			"operation": "ALTER",
+			"resourcePattern": {
+				"name": "some-topic1",
+				"resourceType": "TOPIC",
+			},
+		}
 }

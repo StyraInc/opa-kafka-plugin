@@ -3,12 +3,12 @@ plugins {
     id 'jacoco'
     id 'signing'
     id 'maven-publish'
-    id 'com.github.johnrengelman.shadow' version '5.1.0'
-    id 'com.bisnode.opa' version '0.3.0'
+    id 'com.github.johnrengelman.shadow' version '6.1.0'
+    id 'com.bisnode.opa' version '0.3.1'
 }
 
 group 'com.bisnode.kafka.authorization'
-version '0.4.2'
+version '1.0.0'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_11
@@ -21,15 +21,17 @@ repositories {
     mavenCentral()
 }
 
+// See versions used in Kafka here https://github.com/apache/kafka/blob/2.7.0/gradle/dependencies.gradle
 dependencies {
-    implementation group: 'com.fasterxml.jackson.module', name: 'jackson-module-scala_2.12', version: '2.10.0'
-    implementation group: 'org.apache.kafka', name: 'kafka_2.12', version: '2.3.1'
-    implementation group: 'com.google.guava', name: 'guava', version: '30.0-jre'
+    implementation group: 'com.fasterxml.jackson.module', name: 'jackson-module-scala_2.13', version: '2.10.5'
+    implementation group: 'org.apache.kafka', name: 'kafka_2.13', version: '2.7.0'
+    implementation group: 'com.google.guava', name: 'guava', version: '30.1-jre'
     implementation group: 'com.google.code.findbugs', name: 'jsr305', version: '3.0.2'
 
-    testImplementation group: 'org.scalatest', name: 'scalatest_2.12', version: '3.0.0'
+    testImplementation group: 'org.scalatest', name: 'scalatest_2.13', version: '3.2.5'
+    testImplementation group: 'org.scalatestplus', name: 'junit-4-13_2.13', version: '3.2.5.0'
     testImplementation group: 'junit', name: 'junit', version: '4.12'
-    testImplementation group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.12.1'
+    testImplementation group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.14.0'
 }
 
 shadowJar {
@@ -38,7 +40,8 @@ shadowJar {
             !(it.moduleGroup in [
                     'com.bisnode.kafka.authorization',
                     'com.fasterxml.jackson.module',
-                    'com.thoughtworks.paranamer'
+                    'com.thoughtworks.paranamer',
+                    'com.google.guava'
             ])
         })
     }
@@ -51,12 +54,18 @@ jacocoTestReport {
     }
 }
 
+test {
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+}
+
 publishing {
     publications {
         mavenJava(MavenPublication) {
             groupId ='com.bisnode.kafka.authorization'
             artifactId = 'opa-authorizer'
-            version = '0.4.2'
+            version = '1.0.0'
 
             from components.java
 

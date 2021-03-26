@@ -1,4 +1,4 @@
-#  Open Policy Agent plugin for Kafka authorization 
+#  Open Policy Agent plugin for Kafka authorization
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.bisnode.kafka.authorization/opa-authorizer/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.bisnode.kafka.authorization/opa-authorizer)
 ![](https://github.com/Bisnode/opa-kafka-plugin/workflows/build/badge.svg)
 [![codecov](https://codecov.io/gh/Bisnode/opa-kafka-plugin/branch/master/graph/badge.svg)](https://codecov.io/gh/Bisnode/opa-kafka-plugin)
@@ -13,11 +13,11 @@ Open Policy Agent (OPA) plugin for Kafka authorization.
 
 ## Installation
 
-### 
+###
 
 Download the latest OPA authorizer plugin jar from [Releases](https://github.com/Bisnode/opa-kafka-plugin/releases/) (or [Maven Central](https://search.maven.org/artifact/com.bisnode.kafka.authorization/opa-authorizer)) and put the
 file (`opa-authorizer-{$VERSION}.jar`) somewhere Kafka recognizes it - this could be directly  in Kafkas `libs` directory
-or in a separate plugin directory pointed out to Kafka at startup, e.g: 
+or in a separate plugin directory pointed out to Kafka at startup, e.g:
 
 `CLASSPATH=/usr/local/share/kafka/plugins/*`
 
@@ -34,46 +34,82 @@ The plugin supports the following properties:
 | `opa.authorizer.cache.initial.capacity` | `5000` | `5000` | Initial decision cache size. |
 | `opa.authorizer.cache.maximum.size` | `50000` | `50000` | Max decision cache size. |
 | `opa.authorizer.cache.expire.after.seconds` | `3600` | `3600` | Decision cache expiry in seconds. |
-| `super.users` | `User:alice;User:bob` | `` | Super users which are always allowed. |
+| `super.users` | `User:alice;User:bob` |  | Super users which are always allowed. |
 
 ## Usage
 
 Example structure of input data provided from opa-kafka-plugin to Open Policy Agent.
 ```
 {
-  "operation": {
-    "name": "Write"
-  },
-  "resource": {
-    "resourceType": {
-      "name": "Topic"
+    "action": {
+        "logIfAllowed": true,
+        "logIfDenied": true,
+        "operation": "DESCRIBE",
+        "resourcePattern": {
+            "name": "alice-topic",
+            "patternType": "LITERAL",
+            "resourceType": "TOPIC",
+            "unknown": false
+        },
+        "resourceReferenceCount": 1
     },
-    "name": "alice-topic1"
-  },
-  "session": {
-    "principal": {
-      "principalType": "alice-producer"
-    },
-    "clientAddress": "172.21.0.5",
-    "sanitizedUser": "alice-producer"
-  }
+    "requestContext": {
+        "clientAddress": "192.168.64.1",
+        "clientInformation": {
+            "softwareName": "unknown",
+            "softwareVersion": "unknown"
+        },
+        "connectionId": "192.168.64.4:9092-192.168.64.1:58864-0",
+        "header": {
+            "data": {
+                "clientId": "rdkafka",
+                "correlationId": 5,
+                "requestApiKey": 3,
+                "requestApiVersion": 2
+            },
+            "headerVersion": 1
+        },
+        "listenerName": "SASL_PLAINTEXT",
+        "principal": {
+            "name": "alice-consumer",
+            "principalType": "User"
+        },
+        "securityProtocol": "SASL_PLAINTEXT"
+    }
 }
 ```
 
 The following table summarizes the supported resource types and operation names.
 
-| `input.resourceType.name` | `input.operation.name` |
+| `input.action.resourcePattern.resourceType` | `input.action.operation` |
 | --- | --- |
-| `Cluster` | `ClusterAction` |
-| `Cluster` | `Create` |
-| `Cluster` | `Describe` |
-| `Group` | `Read` |
-| `Group` | `Describe` |
-| `Topic` | `Alter` |
-| `Topic` | `Delete` |
-| `Topic` | `Describe` |
-| `Topic` | `Read` |
-| `Topic` | `Write` |
+| `CLUSTER` | `CLUSTER_ACTION` |
+| `CLUSTER` | `CREATE` |
+| `CLUSTER` | `DESCRIBE` |
+| `GROUP` | `READ` |
+| `GROUP` | `DESCRIPTION` |
+| `TOPIC` | `ALTER` |
+| `TOPIC` | `DELETE` |
+| `TOPIC` | `DESCRIBE` |
+| `TOPIC` | `READ` |
+| `TOPIC` | `WRITE` |
+
+It's likely possible to use all different resource types and operations described in the Kafka API docs:
+https://kafka.apache.org/24/javadoc/org/apache/kafka/common/acl/AclOperation.html
+https://kafka.apache.org/24/javadoc/org/apache/kafka/common/resource/ResourceType.html
+
+### Security protocols:
+
+| Protocol | Decsription |
+|---|---|
+| `PLAINTEXT` | Un-authenticated, non-encrypted channel |
+| `SASL_PLAINTEXT` | authenticated, non-encrypted channel |
+| `SASL` | authenticated, SSL channel |
+| `SSL` | SSL channel |
+
+More info:
+
+https://kafka.apache.org/24/javadoc/org/apache/kafka/common/security/auth/SecurityProtocol.html
 
 ### Policy sample
 
@@ -92,47 +128,6 @@ User `alice-consumer` will be...
 
 [See sample rego](src/main/rego/README.md)
 
-## Performance
-Performance results of opa-kafka-plugin compared with ACL's and even unauthorized
-access to Kafka shows that there is a very little trade off when it comes to
-performance when using either this opa-kafka-plugin or ACL's.
-
-The tests were made with the following setup:
-
-|Resources|#|
-|---|---|
-| Brokers | 3 |
-| Partitions per topic | 10 |
-| Replicas per topic | 3 |
-| Zookeeper nodes | 3 |
-
-Background noise on one topic with a producer producing 5000 msgs/s with message
-size of 512b were used in all tests.
-
-### opa-kafka-plugin test results
-
-|Test #|Records sent|Payload(b)|records/s|MB/sec|avg latency (ms)|latency avg 50th perc (ms)|latency avg 95th perc (ms)|latency avg 99th perc (ms)|latency avg 99,99 perc (ms)|
-|---|---|---|---|---|---|---|---|---|---|
-|1|102000|666|170|0.11|4.07|1|2|18|748|
-|2|102000|330|170|0.05|2.03|1|2|18|754|
-|3|102000|1200|170|0.19|2.09|1|2|19|946|
-
-### ACL test results
-
-|Test #|Records sent|Payload(b)|records/s|MB/sec|avg latency (ms)|latency avg 50th perc (ms)|latency avg 95th perc (ms)|latency avg 99th perc (ms)|latency avg 99,99 perc (ms)|
-|---|---|---|---|---|---|---|---|---|---|
-|1|102000|666|170|0.11|3.45|1|4|21|604|
-|2|102000|330|170|0.05|3.21|1|3|22|566|
-|3|102000|1200|170|0.19|3.01|1|3|19|504|
-
-### No authorization test results
-
-|Test #|Records sent|Payload(b)|records/s|MB/sec|avg latency (ms)|latency avg 50th perc (ms)|latency avg 95th perc (ms)|latency avg 99th perc (ms)|latency avg 99,99 perc (ms)|
-|---|---|---|---|---|---|---|---|---|---|
-|1|102000|666|170| 1.11|1.70|1|2|19|128|
-|2|102000|330|170| 0.05|2.03|1|2|18|298|
-|3|102000|1200|170| 0.19|2.09|1|2|18|332|
-
 ## Build from source
 
 Using gradle wrapper: `./gradlew clean test shadowJar`
@@ -146,4 +141,3 @@ Set log level `log4j.logger.com.bisnode=INFO` in `config/log4j.properties`
 Use DEBUG or TRACE for debugging.
 
 In a busy Kafka cluster it might be good to tweak the cache since it may produce a lot of log entries in Open Policy Agent, especially if decision logs are turned on. If the policy isn't dynamically updated very often it's recommended to cache a lot to improve performance and reduce the amount of log entries.
-

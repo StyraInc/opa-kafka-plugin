@@ -6,90 +6,90 @@ package kafka.authz
 
 default allow = false
 
+# Anything from brokers (ANONYMOUS) is allowed (Other way to identify cluster actions?)
 allow {
-    inter_broker_communication
+	inter_broker_communication
 }
 
 allow {
-    consume
-    on_own_topic
-    as_consumer
+	consume(input.action)
+	on_own_topic(input.action)
+	as_consumer
 }
 
 allow {
-    produce
-    on_own_topic
-    as_producer
+	produce(input.action)
+	on_own_topic(input.action)
+	as_producer
 }
 
 allow {
-    create
-    on_own_topic
+	create(input.action)
+	on_own_topic(input.action)
 }
 
 allow {
-    any_operation
-    on_own_topic
-    as_mgmt_user
+	any_operation(input.action)
+	on_own_topic(input.action)
+	as_mgmt_user
 }
 
 allow {
-    describe
+	describe(input.action)
 }
-
 
 # ----------------------------------------------------
 #  Functions
 # ----------------------------------------------------
 
 inter_broker_communication {
-    input.session.principal.name == "ANONYMOUS"
+	input.requestContext.principal.name == "ANONYMOUS"
 }
 
-consume {
-    input.operation.name == "Read"
+consume(action) {
+	action.operation == "READ"
 }
 
-produce {
-    input.operation.name == "Write"
+produce(action) {
+	action.operation == "WRITE"
 }
 
-create {
-    input.operation.name == "Create"
+create(action) {
+	action.operation == "CREATE"
 }
 
-describe {
-    input.operation.name == "Describe"
+describe(action) {
+	action.operation == "DESCRIBE"
 }
 
-any_operation {
-    all_operations := ["Read", "Write", "Create", "Alter", "Describe", "Delete"]
-    all_operations[_] == input.operation.name
+any_operation(action) {
+	all_operations := ["READ", "WRITE", "CREATE", "ALTER", "DESCRIBE", "DELETE"]
+	all_operations[_] == action.operation
 }
 
 as_consumer {
-    re_match(".*-consumer", input.session.principal.name)
+	re_match(".*-consumer", input.requestContext.principal.name)
 }
 
 as_producer {
-    re_match(".*-producer", input.session.principal.name)
+	re_match(".*-producer", input.requestContext.principal.name)
 }
 
 as_mgmt_user {
-    re_match(".*-mgmt", input.session.principal.name)
+	re_match(".*-mgmt", input.requestContext.principal.name)
 }
 
-on_own_topic = true {
-    owner := trim(input.session.principal.name, "-consumer")
-    re_match(owner, input.resource.name)
+on_own_topic(action) {
+	owner := trim(input.requestContext.principal.name, "-consumer")
+	re_match(owner, action.resourcePattern.name)
 }
 
-on_own_topic = true {
-    owner := trim(input.session.principal.name, "-producer")
-    re_match(owner, input.resource.name)
+on_own_topic(action) {
+	owner := trim(input.requestContext.principal.name, "-producer")
+	re_match(owner, action.resourcePattern.name)
 }
 
-on_own_topic = true {
-    owner := trim(input.session.principal.name, "-mgmt")
-    re_match(owner, input.resource.name)
+on_own_topic(action) {
+	owner := trim(input.requestContext.principal.name, "-mgmt")
+	re_match(owner, action.resourcePattern.name)
 }
