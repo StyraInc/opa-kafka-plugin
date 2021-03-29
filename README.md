@@ -7,7 +7,7 @@ Open Policy Agent (OPA) plugin for Kafka authorization.
 
 ### Prerequisites
 
-* Kafka 2.3.x (compile from source for other versions)
+* Kafka 2.7.x (compile from source for other versions)
 * Java 11 or above
 * OPA installed and running on the brokers
 
