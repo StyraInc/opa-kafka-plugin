@@ -20,4 +20,3 @@ jobs:
           OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
         with:
           arguments: publishAllPublicationsToOSSRHRepository -PossrhUsername=$OSSRH_USERNAME -PossrhPassword=$OSSRH_PASSWORD -Dorg.gradle.internal.publish.checksums.insecure=true
-

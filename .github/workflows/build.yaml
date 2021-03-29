@@ -15,6 +15,8 @@ jobs:
         run: wget -O opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64
       - name: Install opa
         run: sudo mv opa /usr/local/bin/ && sudo chmod +x /usr/local/bin/opa
+      - name: Test example rego
+        run: opa test ./src/main/rego/policy.rego ./src/test/rego/policy_test.rego
       - name: Build plugin
         run: ./gradlew check shadowJar
       - name: Jacoco test report
@@ -33,5 +35,3 @@ jobs:
           token: ${{secrets.CODECOV_TOKEN}}
           file: ./build/reports/opa/opa-codecov-coverage.json
           name: opa-policies
-      - name: Test example rego domain_based_policy
-        run: opa test ./examples/rego/domain_based_policy/policy.rego ./examples/rego/domain_based_policy/test/

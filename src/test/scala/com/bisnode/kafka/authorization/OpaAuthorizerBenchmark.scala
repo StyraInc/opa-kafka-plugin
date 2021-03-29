@@ -2,14 +2,18 @@ package com.bisnode.kafka.authorization
 
 import java.net.InetAddress
 import java.util
+import java.util.Collections
 import java.util.concurrent.TimeUnit
 
 import kafka.network.RequestChannel
-import kafka.security.auth.{Operation, Resource, ResourceType}
+import kafka.network.RequestChannel.Session
 import org.apache.kafka.common.acl.AclOperation
+import org.apache.kafka.common.resource.ResourcePattern
 import org.apache.kafka.common.resource.PatternType
 import org.apache.kafka.common.resource.ResourceType.TOPIC
-import org.apache.kafka.common.security.auth.KafkaPrincipal
+import org.apache.kafka.common.security.auth.{KafkaPrincipal, SecurityProtocol}
+import org.apache.kafka.server.authorizer.{AuthorizableRequestContext, Action}
+import scala.jdk.CollectionConverters._
 
 object OpaAuthorizerBenchmark {
   private val opaUrl = "http://localhost:8181/v1/data/kafka/authz/allow"
@@ -17,12 +21,10 @@ object OpaAuthorizerBenchmark {
   def main(args: Array[String]): Unit = {
     val startTime = System.nanoTime
     val benchmark = new OpaAuthorizerBenchmark
-
     val numCalls = 10000
-
     for (_ <- 1 until numCalls) {
-      val input = benchmark.createRequest.input
-      benchmark.getAuthorizer.authorize(input.session, input.operation, input.resource)
+      val input = benchmark.createRequest
+      benchmark.getAuthorizer.authorize(input.requestContext, input.actions.asJava)
     }
 
     val endTime = System.nanoTime
@@ -43,12 +45,22 @@ class OpaAuthorizerBenchmark {
   config.put("opa.authorizer.allow.on.error", "false")
   authorizer.configure(config)
 
-  private def createRequest = {
-    // Adding random value to user to ensure cache misses - change as appropriate to test cache hits or both
-    val user = new KafkaPrincipal("User", "user-" + new scala.util.Random().nextInt)
-    val resource = new Resource(ResourceType.fromJava(TOPIC), "my-topic", PatternType.LITERAL)
-    val session = RequestChannel.Session(user, InetAddress.getLoopbackAddress)
-    Request(Input(session, Operation.fromJava(AclOperation.WRITE), resource))
+  def createRequest = {
+    val principal = new KafkaPrincipal("User", "user-" + new scala.util.Random().nextInt())
+    val session = RequestChannel.Session(principal, InetAddress.getLoopbackAddress)
+    val resource = new ResourcePattern(TOPIC, "my-topic", PatternType.LITERAL)
+    val authzReqContext = new AzRequestContext(
+      clientId = "rdkafka",
+      requestType = 1,
+      listenerName = "SASL_PLAINTEXT",
+      clientAddress = session.clientAddress,
+      principal = session.principal,
+      securityProtocol = SecurityProtocol.SASL_PLAINTEXT,
+      correlationId = new scala.util.Random().nextInt(1000),
+      requestVersion = 4)
+    val actions = List(new Action(AclOperation.WRITE, resource, 1, true, true))
+
+    FullRequest(authzReqContext, actions)
   }
 
   private def getAuthorizer = authorizer

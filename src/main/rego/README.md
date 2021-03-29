@@ -7,6 +7,4 @@ It assumes that inter broker communication is unauthenticated.
 For example, only users prefixed with `alice` will be able to read or consume
 topic `alice-topic1`, depending on the user type.
 
-# Tests
-
 See [policy tests](../../test/rego/README.md)

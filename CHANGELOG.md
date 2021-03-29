@@ -4,7 +4,66 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased 
+## [1.0.0] - 2021-03-XX
+
+### Changes
+
+#### Breaking changes:
+
+- Update to use Scala 2.13
+  - Requires a Kafka cluster running 2.13
+- Update to Kafka library 2.7.0
+  - Requires Kafka 2.7.X
+- New input structure to OPA
+  - You will need to adjust policies to work with the new input structure. See an example of the new structure down below. We suggest to update your policies before upgrading, to work with both the old and the new structure. Then upgrade the plugin and then remove the old policies.`
+
+New input structure:
+```json
+{
+    "action": {
+        "logIfAllowed": true,
+        "logIfDenied": true,
+        "operation": "DESCRIBE",
+        "resourcePattern": {
+            "name": "alice-topic",
+            "patternType": "LITERAL",
+            "resourceType": "TOPIC",
+            "unknown": false
+        },
+        "resourceReferenceCount": 1
+    },
+    "requestContext": {
+        "clientAddress": "192.168.64.1",
+        "clientInformation": {
+            "softwareName": "unknown",
+            "softwareVersion": "unknown"
+        },
+        "connectionId": "192.168.64.4:9092-192.168.64.1:58864-0",
+        "header": {
+            "data": {
+                "clientId": "rdkafka",
+                "correlationId": 5,
+                "requestApiKey": 3,
+                "requestApiVersion": 2
+            },
+            "headerVersion": 1
+        },
+        "listenerName": "SASL_PLAINTEXT",
+        "principal": {
+            "name": "alice-consumer",
+            "principalType": "User"
+        },
+        "securityProtocol": "SASL_PLAINTEXT"
+    }
+}
+```
+
+#### Other changes
+
+- Include `guava` and `paranamer` in the shadowJar since it's been excluded from the Kafka installation
+- Update to use the new Kafka libraries to use the new API
+- Update OPA policy and tests to work with the new input structure
+- Update version on various dependencies
 - Add Maven information to README
 - Update changelog
 
