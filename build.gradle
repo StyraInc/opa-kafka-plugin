@@ -8,7 +8,7 @@ plugins {
 }
 
 group 'com.bisnode.kafka.authorization'
-version '1.0.0'
+version '1.1.0'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_11
@@ -24,7 +24,7 @@ repositories {
 // See versions used in Kafka here https://github.com/apache/kafka/blob/2.7.0/gradle/dependencies.gradle
 dependencies {
     implementation group: 'com.fasterxml.jackson.module', name: 'jackson-module-scala_2.13', version: '2.10.5'
-    implementation group: 'org.apache.kafka', name: 'kafka_2.13', version: '2.7.0'
+    implementation group: 'org.apache.kafka', name: 'kafka_2.13', version: '2.8.0'
     implementation group: 'com.google.guava', name: 'guava', version: '30.1-jre'
     implementation group: 'com.google.code.findbugs', name: 'jsr305', version: '3.0.2'
 
@@ -65,7 +65,7 @@ publishing {
         mavenJava(MavenPublication) {
             groupId ='com.bisnode.kafka.authorization'
             artifactId = 'opa-authorizer'
-            version = '1.0.0'
+            version = '1.1.0'
 
             from components.java
 
