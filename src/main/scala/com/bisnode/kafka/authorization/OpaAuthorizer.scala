@@ -9,7 +9,10 @@ import java.util.Collections
 import java.util.concurrent.{Callable, ExecutionException, TimeUnit, CompletionStage, CompletableFuture}
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.databind.{JsonSerializer, ObjectMapper, SerializationFeature, SerializerProvider}
 import com.fasterxml.jackson.databind.json.JsonMapper
+import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.module.scala.{DefaultScalaModule, ScalaObjectMapper}
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.cache.{Cache, CacheBuilder}
@@ -19,6 +22,9 @@ import scala.jdk.CollectionConverters._
 import org.apache.kafka.common.Endpoint
 import org.apache.kafka.common.acl.{AclOperation, AclBinding, AclBindingFilter}
 import org.apache.kafka.common.resource.{ResourcePattern, PatternType}
+import org.apache.kafka.common.message.RequestHeaderData
+import org.apache.kafka.common.network.ClientInformation
+import org.apache.kafka.common.requests.{RequestContext, RequestHeader}
 import org.apache.kafka.common.security.auth.{KafkaPrincipal, SecurityProtocol}
 import org.apache.kafka.server.authorizer.{Authorizer, AuthorizableRequestContext, Action, AuthorizationResult, AuthorizerServerInfo, AclDeleteResult, AclCreateResult}
 
@@ -109,8 +115,93 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
   }
 }
 
+class ResourcePatternSerializer() extends JsonSerializer[ResourcePattern] {
+  override def serialize(value: ResourcePattern, gen: JsonGenerator, provider: SerializerProvider): Unit = {
+    gen.writeStartObject()
+    gen.writeStringField("resourceType", value.resourceType().name())
+    gen.writeStringField("name", value.name())
+    gen.writeStringField("patternType", value.patternType().name())
+    gen.writeBooleanField("unknown", value.isUnknown())
+    gen.writeEndObject()
+  }
+}
+
+class ActionSerializer() extends JsonSerializer[Action] {
+  override def serialize(value: Action, gen: JsonGenerator, provider: SerializerProvider): Unit = {
+    gen.writeStartObject()
+    gen.writeObjectField("resourcePattern", value.resourcePattern())
+    gen.writeStringField("operation", value.operation().name())
+    gen.writeNumberField("resourceReferenceCount", value.resourceReferenceCount())
+    gen.writeBooleanField("logIfAllowed", value.logIfAllowed())
+    gen.writeBooleanField("logIfDenied", value.logIfDenied())
+    gen.writeEndObject()
+  }
+}
+
+class RequestContextSerializer() extends JsonSerializer[RequestContext] {
+  override def serialize(value: RequestContext, gen: JsonGenerator, provider: SerializerProvider): Unit = {
+    gen.writeStartObject()
+    gen.writeStringField("clientAddress", value.clientAddress().toString)
+    gen.writeObjectField("clientInformation", value.clientInformation)
+    gen.writeStringField("connectionId", value.connectionId)
+    gen.writeObjectField("header", value.header) //
+    gen.writeStringField("listenerName", value.listenerName())
+    gen.writeObjectField("principal", value.principal())
+    gen.writeStringField("securityProtocol", value.securityProtocol().name())
+    gen.writeEndObject()
+  }
+}
+
+class ClientInformationSerializer() extends JsonSerializer[ClientInformation] {
+  override def serialize(value: ClientInformation, gen: JsonGenerator, provider: SerializerProvider): Unit = {
+    gen.writeStartObject()
+    gen.writeStringField("softwareName", value.softwareName())
+    gen.writeStringField("softwareVersion", value.softwareVersion())
+    gen.writeEndObject()
+  }
+}
+
+class KafkaPrincipalSerializer() extends JsonSerializer[KafkaPrincipal] {
+  override def serialize(value: KafkaPrincipal, gen: JsonGenerator, provider: SerializerProvider): Unit = {
+    gen.writeStartObject()
+    gen.writeStringField("principalType", value.getPrincipalType())
+    gen.writeStringField("name", value.getName())
+    gen.writeEndObject()
+  }
+}
+
+class RequestHeaderSerializer() extends JsonSerializer[RequestHeader] {
+  override def serialize(value: RequestHeader, gen: JsonGenerator, provider: SerializerProvider): Unit = {
+    gen.writeStartObject()
+    gen.writeObjectField("name", value.data())
+    // Jackson 2.10 does not support writeNumberField for shorts
+    gen.writeFieldName("headerVersion")
+    gen.writeNumber(value.headerVersion())
+    gen.writeEndObject()
+  }
+}
+
+class RequestHeaderDataSerializer() extends JsonSerializer[RequestHeaderData] {
+  override def serialize(value: RequestHeaderData, gen: JsonGenerator, provider: SerializerProvider): Unit = {
+    gen.writeStartObject()
+    gen.writeStringField("clientId", value.clientId())
+    gen.writeNumberField("correlationId", value.correlationId())
+    gen.writeNumberField("requestApiKey", value.requestApiKey())
+    gen.writeNumberField("requestApiVersion", value.requestApiVersion())
+    gen.writeEndObject()
+  }
+}
+
 object AllowCallable {
-  private val objectMapper = JsonMapper.builder().addModule(DefaultScalaModule).build()
+  private val requestSerializerModule = new SimpleModule()
+    .addSerializer(classOf[ResourcePattern], new ResourcePatternSerializer)
+    .addSerializer(classOf[Action], new ActionSerializer)
+    .addSerializer(classOf[RequestContext], new RequestContextSerializer)
+    .addSerializer(classOf[ClientInformation], new ClientInformationSerializer)
+    .addSerializer(classOf[KafkaPrincipal], new KafkaPrincipalSerializer)
+    .addSerializer(classOf[RequestHeader], new RequestHeaderSerializer)
+    .addSerializer(classOf[RequestHeaderData], new RequestHeaderDataSerializer)
+  private val objectMapper = JsonMapper.builder().addModule(requestSerializerModule).addModule(DefaultScalaModule).build()
   private val client = HttpClient.newBuilder.connectTimeout(ofSeconds(5)).build
   private val requestBuilder = HttpRequest.newBuilder.timeout(ofSeconds(5)).header("Content-Type", "application/json")
 }

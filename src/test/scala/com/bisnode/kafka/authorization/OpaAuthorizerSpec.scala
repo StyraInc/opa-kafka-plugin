@@ -6,7 +6,6 @@ import java.net.http.HttpResponse.BodyHandlers
 import java.net.http.{HttpClient, HttpRequest, HttpResponse}
 import java.util.Collections
 import java.{util => ju}
-
 import org.junit.runner.RunWith
 import org.scalatestplus.junit.JUnitRunner
 import com.typesafe.scalalogging.LazyLogging
@@ -15,11 +14,14 @@ import com.fasterxml.jackson.module.scala.{DefaultScalaModule, ScalaObjectMapper
 import kafka.network.RequestChannel
 import kafka.network.RequestChannel.Session
 import org.apache.kafka.common.acl.AclOperation
+import org.apache.kafka.common.network.{ClientInformation, ListenerName}
+import org.apache.kafka.common.protocol.ApiKeys
 import org.apache.kafka.common.resource.PatternType
 import org.apache.kafka.common.security.auth.{KafkaPrincipal, SecurityProtocol}
 import org.apache.kafka.common.resource.ResourcePattern
 import org.apache.kafka.common.resource.PatternType
 import org.apache.kafka.common.resource.ResourceType
+import org.apache.kafka.common.requests.{RequestContext, RequestHeader}
 import org.apache.kafka.server.authorizer.{Action, AuthorizationResult}
 import org.scalatest._
 import matchers.should._
@@ -30,7 +32,6 @@ import scala.compat.java8.FutureConverters
 import io.netty.util.concurrent.Future
 import scala.util.{Success, Failure}
 import scala.concurrent.ExecutionContext.Implicits.global
-
 import scala.jdk.CollectionConverters._
 
 /**
@@ -189,6 +190,18 @@ class OpaAuthorizerSpec extends AnyFlatSpec with Matchers with PrivateMethodTest
     )
     val request3 = createRequest("CN=my-user3", actions3)
     opaAuthorizer.authorize(request3.requestContext, request3.actions.asJava) should be (List(AuthorizationResult.DENIED).asJava)
+  }
+
+  "OpaAuthorizer" should "authorize when RequestContext is used" in {
+    val opaAuthorizer = setupAuthorizer()
+    val actions = List(
+      createAction("alice-topic", AclOperation.WRITE),
+    )
+    val requestContext = new RequestContext(new RequestHeader(ApiKeys.PRODUCE, 2, "rdkafka", 5), "192.168.64.4:9092-192.168.64.1:58864-0", InetAddress.getLoopbackAddress, new KafkaPrincipal("User", "alice-producer"),
+      new ListenerName("SASL_PLAINTEXT"), SecurityProtocol.SASL_PLAINTEXT, new ClientInformation("rdkafka", "1.0.0"), false)
+
+    opaAuthorizer.authorize(requestContext, actions.asJava) should be (List(AuthorizationResult.ALLOWED).asJava)
+    opaAuthorizer.getCache.size should be (1)
   }
 
   def setupAuthorizer(url: String = opaUrl): OpaAuthorizer = {
