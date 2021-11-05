@@ -1,33 +1,28 @@
 package com.bisnode.kafka.authorization
 
-import java.net.http.HttpRequest.BodyPublishers
-import java.net.http.HttpResponse.BodyHandlers
-import java.net.http.{HttpClient, HttpRequest}
-import java.net.{URI, URL, InetAddress}
-import java.time.Duration.ofSeconds
-import java.util.Collections
-import java.util.concurrent.{Callable, ExecutionException, TimeUnit, CompletionStage, CompletableFuture}
-
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.databind.{JsonSerializer, ObjectMapper, SerializationFeature, SerializerProvider}
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
-import com.fasterxml.jackson.module.scala.{DefaultScalaModule, ScalaObjectMapper}
+import com.fasterxml.jackson.databind.{JsonSerializer, SerializerProvider}
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.cache.{Cache, CacheBuilder}
 import com.typesafe.scalalogging.LazyLogging
-import scala.jdk.CollectionConverters._
-
 import org.apache.kafka.common.Endpoint
-import org.apache.kafka.common.acl.{AclOperation, AclBinding, AclBindingFilter}
-import org.apache.kafka.common.resource.{ResourcePattern, PatternType}
+import org.apache.kafka.common.acl.{AclBinding, AclBindingFilter, AclOperation}
 import org.apache.kafka.common.message.RequestHeaderData
 import org.apache.kafka.common.network.ClientInformation
 import org.apache.kafka.common.requests.{RequestContext, RequestHeader}
-import org.apache.kafka.common.security.auth.{KafkaPrincipal, SecurityProtocol}
-import org.apache.kafka.server.authorizer.{Authorizer, AuthorizableRequestContext, Action, AuthorizationResult, AuthorizerServerInfo, AclDeleteResult, AclCreateResult}
+import org.apache.kafka.common.resource.{PatternType, ResourcePattern, ResourceType}
+import org.apache.kafka.common.security.auth.KafkaPrincipal
+import org.apache.kafka.server.authorizer._
 
+import java.net.http.HttpRequest.BodyPublishers
+import java.net.http.HttpResponse.BodyHandlers
+import java.net.http.{HttpClient, HttpRequest}
+import java.net.{URI, URL}
+import java.time.Duration.ofSeconds
+import java.util.concurrent._
 import scala.jdk.CollectionConverters._
 
 //noinspection NotImplementedCode
@@ -64,7 +59,7 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
   private[authorization] def getCache = cache
 
   // None of the below needs implementations
-  override def close(): Unit = ???
+  override def close(): Unit = { }
   override def acls(acls: AclBindingFilter): java.lang.Iterable[AclBinding] = ???
   override def deleteAcls(requestContext: AuthorizableRequestContext, aclBindingFilters: java.util.List[AclBindingFilter]): java.util.List[_ <: CompletionStage[AclDeleteResult]] = ???
   override def createAcls(requestContext: AuthorizableRequestContext, aclBindings: java.util.List[AclBinding]): java.util.List[_ <: CompletionStage[AclCreateResult]] = ???
@@ -75,6 +70,14 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
       throw new IllegalArgumentException("Only literal resources are supported. Got: " + resource.patternType)
     }
 
+    doAuthorize(requestContext, action)
+  }
+
+  override def authorizeByResourceType(requestContext: AuthorizableRequestContext, op: AclOperation, resourceType: ResourceType): AuthorizationResult = {
+    doAuthorize(requestContext, new Action(op, new ResourcePattern(resourceType, "", PatternType.PREFIXED), 0, true, true))
+  }
+
+  private def doAuthorize(requestContext: AuthorizableRequestContext, action: Action) = {
     // ensure we compare identical classes
     val sessionPrincipal = requestContext.principal
     val principal = if (classOf[KafkaPrincipal] != sessionPrincipal.getClass)
@@ -83,7 +86,6 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
       sessionPrincipal
 
     val host = requestContext.clientAddress.getHostAddress
-    val operation = action.operation
 
     val cachableRequest = CachableRequest(principal, action, host)
     val request = Request(Input(requestContext, action))
@@ -104,7 +106,6 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
     val authorized = isSuperUser(principal) || allowAccess
 
     if (authorized) AuthorizationResult.ALLOWED else AuthorizationResult.DENIED
-
   }
 
   def isSuperUser(principal: KafkaPrincipal): Boolean = {
