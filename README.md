@@ -39,7 +39,7 @@ The plugin supports the following properties:
 ## Usage
 
 Example structure of input data provided from opa-kafka-plugin to Open Policy Agent.
-```
+```json
 {
     "action": {
         "logIfAllowed": true,
@@ -88,11 +88,41 @@ The following table summarizes the supported resource types and operation names.
 | `CLUSTER` | `DESCRIBE` |
 | `GROUP` | `READ` |
 | `GROUP` | `DESCRIPTION` |
+| `TOPIC` | `CREATE` |
 | `TOPIC` | `ALTER` |
 | `TOPIC` | `DELETE` |
 | `TOPIC` | `DESCRIBE` |
 | `TOPIC` | `READ` |
 | `TOPIC` | `WRITE` |
+| `TRANSACTIONAL_ID` | `DESCRIBE` |
+| `TRANSACTIONAL_ID` | `WRITE` |
+
+These are handled by the method _authorizeAction_, and passed to OPA with an _action_, that identifies 
+the accessed resource and the performed operation. _patternType_ is always _LITERAL_.
+
+Creation of a topic checks for CLUSTER + CREATE. If this is denied, it will check for TOPIC with its name + CREATE.
+
+When doing idepotent write to a topic, and the first request for operation=IDEMPOTENT_WRITE on the resourceType=CLUSTER is denied,
+the method _authorizeByResourceType_ to check, if the user has the right to write to any topic.
+If yes, the idempotent write is granted by Kafka's ACL-implementation. To allow for a similar check,
+it is mapped to OPA with _patternType=PREFIXED_, _resourceType=TOPIC_, and _name=""_.
+```json
+{
+  "action": {
+    "logIfAllowed": true,
+    "logIfDenied": true,
+    "operation": "DESCRIBE",
+    "resourcePattern": {
+      "name": "",
+      "patternType": "PREFIXED",
+      "resourceType": "TOPIC",
+      "unknown": false
+    },
+    "resourceReferenceCount": 1
+  },
+  ...
+}
+```
 
 It's likely possible to use all different resource types and operations described in the Kafka API docs:
 https://kafka.apache.org/24/javadoc/org/apache/kafka/common/acl/AclOperation.html
