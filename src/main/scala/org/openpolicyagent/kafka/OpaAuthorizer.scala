@@ -1,4 +1,4 @@
-package com.bisnode.kafka.authorization
+package org.openpolicyagent.kafka
 
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.json.JsonMapper
@@ -37,7 +37,7 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
     .maximumSize(config.getOrElse("opa.authorizer.cache.maximum.size", "50000").toInt)
     .expireAfterWrite(config.getOrElse("opa.authorizer.cache.expire.after.seconds", "3600").toInt, TimeUnit.SECONDS)
     .build
-    .asInstanceOf[Cache[CachableRequest, Boolean]]
+    .asInstanceOf[Cache[CacheableRequest, Boolean]]
 
   override def authorize(requestContext: AuthorizableRequestContext, actions: java.util.List[Action]): java.util.List[AuthorizationResult] = {
     actions.asScala.map { action => authorizeAction(requestContext, action) }.asJava
@@ -56,7 +56,7 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
   }
 
   @VisibleForTesting
-  private[authorization] def getCache = cache
+  private[kafka] def getCache = cache
 
   // None of the below needs implementations
   override def close(): Unit = { }
@@ -87,7 +87,7 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
 
     val host = requestContext.clientAddress.getHostAddress
 
-    val cachableRequest = CachableRequest(principal, action, host)
+    val cachableRequest = CacheableRequest(principal, action, host)
     val request = Request(Input(requestContext, action))
 
     def allowAccess = {
@@ -221,4 +221,4 @@ class AllowCallable(request: Request, opaUrl: URI, allowOnError: Boolean) extend
 
 case class Input(requestContext: AuthorizableRequestContext, action: Action)
 case class Request(input: Input)
-case class CachableRequest(principal: KafkaPrincipal, action: Action, host: String)
+case class CacheableRequest(principal: KafkaPrincipal, action: Action, host: String)

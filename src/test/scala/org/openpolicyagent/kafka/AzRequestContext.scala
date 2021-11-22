@@ -1,4 +1,4 @@
-package com.bisnode.kafka.authorization
+package org.openpolicyagent.kafka
 
 import java.net.InetAddress
 import org.apache.kafka.common.security.auth.{KafkaPrincipal, SecurityProtocol}

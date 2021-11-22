@@ -4,10 +4,10 @@ plugins {
     id 'signing'
     id 'maven-publish'
     id 'com.github.johnrengelman.shadow' version '6.1.0'
-    id 'com.bisnode.opa' version '0.3.1'
+    id 'com.bisnode.opa' version '0.3.2'
 }
 
-group 'com.bisnode.kafka.authorization'
+group 'org.openpolicyagent.kafka'
 version '1.2.0'
 
 java {
@@ -21,7 +21,7 @@ repositories {
     mavenCentral()
 }
 
-// See versions used in Kafka here https://github.com/apache/kafka/blob/2.7.0/gradle/dependencies.gradle
+// See versions used in Kafka here https://github.com/apache/kafka/blob/2.8.0/gradle/dependencies.gradle
 dependencies {
     implementation group: 'com.fasterxml.jackson.module', name: 'jackson-module-scala_2.13', version: '2.10.5'
     implementation group: 'org.apache.kafka', name: 'kafka_2.13', version: '2.8.0'
@@ -38,7 +38,7 @@ shadowJar {
     dependencies {
         exclude(dependency {
             !(it.moduleGroup in [
-                    'com.bisnode.kafka.authorization',
+                    'org.openpolicyagent.kafka',
                     'com.fasterxml.jackson.module',
                     'com.thoughtworks.paranamer',
                     'com.google.guava'
@@ -63,46 +63,40 @@ test {
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            groupId ='com.bisnode.kafka.authorization'
+            groupId ='org.openpolicyagent.kafka'
             artifactId = 'opa-authorizer'
-            version = '1.2.0'
+            version = '1.3.0'
 
             from components.java
 
             pom {
                 name = 'Open Policy Agent plugin for Kafka authorization'
                 description = 'Open Policy Agent (OPA) plugin for Kafka authorization.'
-                url = 'https://github.com/Bisnode/opa-kafka-plugin'
+                url = 'https://github.com/anderseknert/opa-kafka-plugin'
                 licenses {
                     license {
                         name = 'The Apache License, Version 2.0'
-                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
                     }
                 }
                 developers {
                     developer {
                         name = 'Anders Eknert'
-                        email = 'anders.eknert@bisnode.com'
-                        organization = 'Bisnode'
-                        organizationUrl = 'https://www.bisnode.com'
+                        email = 'anders@eknert.com'
+                        organization = 'Styra'
+                        organizationUrl = 'https://www.styra.com'
                     }
                     developer {
-                        name = 'Daniel Olsson'
-                        email = 'daniel.olsson@bisnode.com'
-                        organization = 'Bisnode'
-                        organizationUrl = 'https://www.bisnode.com'
-                    }
-                    developer {
-                        name = 'Łukasz Kamiński'
-                        email = 'lukasz.kaminski@bisnode.com'
-                        organization = 'Bisnode'
-                        organizationUrl = 'https://www.bisnode.com'
+                        name = 'Jakub Scholz'
+                        email = 'jakub@scholz.cz'
+                        organization = 'Red Hat'
+                        organizationUrl = 'https://www.redhat.com'
                     }
                 }
                 scm {
-                    connection = 'scm:git:git://github.com/Bisnode/opa-kafka-plugin.git'
-                    developerConnection = 'scm:git:ssh://github.com/Bisnode/opa-kafka-plugin.git'
-                    url = 'https://github.com/Bisnode/opa-kafka-plugin.git'
+                    connection = 'scm:git:git://github.com/anderseknert/opa-kafka-plugin.git'
+                    developerConnection = 'scm:git:ssh://github.com/anderseknert/opa-kafka-plugin.git'
+                    url = 'https://github.com/anderseknert/opa-kafka-plugin.git'
                 }
             }
         }
