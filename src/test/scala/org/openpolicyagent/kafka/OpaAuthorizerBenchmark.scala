@@ -1,18 +1,16 @@
-package com.bisnode.kafka.authorization
+package org.openpolicyagent.kafka
 
 import java.net.InetAddress
 import java.util
-import java.util.Collections
 import java.util.concurrent.TimeUnit
 
 import kafka.network.RequestChannel
-import kafka.network.RequestChannel.Session
 import org.apache.kafka.common.acl.AclOperation
 import org.apache.kafka.common.resource.ResourcePattern
 import org.apache.kafka.common.resource.PatternType
 import org.apache.kafka.common.resource.ResourceType.TOPIC
 import org.apache.kafka.common.security.auth.{KafkaPrincipal, SecurityProtocol}
-import org.apache.kafka.server.authorizer.{AuthorizableRequestContext, Action}
+import org.apache.kafka.server.authorizer.Action
 import scala.jdk.CollectionConverters._
 
 object OpaAuthorizerBenchmark {

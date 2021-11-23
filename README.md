@@ -1,6 +1,6 @@
 #  Open Policy Agent plugin for Kafka authorization
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.bisnode.kafka.authorization/opa-authorizer/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.bisnode.kafka.authorization/opa-authorizer)
-![](https://github.com/Bisnode/opa-kafka-plugin/workflows/build/badge.svg)
+![](https://github.com/anderseknert/opa-kafka-plugin/workflows/build/badge.svg)
 [![codecov](https://codecov.io/gh/Bisnode/opa-kafka-plugin/branch/master/graph/badge.svg)](https://codecov.io/gh/Bisnode/opa-kafka-plugin)
 
 Open Policy Agent (OPA) plugin for Kafka authorization.
@@ -15,14 +15,14 @@ Open Policy Agent (OPA) plugin for Kafka authorization.
 
 ###
 
-Download the latest OPA authorizer plugin jar from [Releases](https://github.com/Bisnode/opa-kafka-plugin/releases/) (or [Maven Central](https://search.maven.org/artifact/com.bisnode.kafka.authorization/opa-authorizer)) and put the
-file (`opa-authorizer-{$VERSION}.jar`) somewhere Kafka recognizes it - this could be directly  in Kafkas `libs` directory
+Download the latest OPA authorizer plugin jar from [Releases](https://github.com/anderseknert/opa-kafka-plugin/releases/) (or [Maven Central](https://search.maven.org/artifact/com.bisnode.kafka.authorization/opa-authorizer)) and put the
+file (`opa-authorizer-{$VERSION}.jar`) somewhere Kafka recognizes it - this could be directly in Kafka's `libs` directory
 or in a separate plugin directory pointed out to Kafka at startup, e.g:
 
 `CLASSPATH=/usr/local/share/kafka/plugins/*`
 
 To activate the opa-kafka-plugin add the `authorizer.class.name` to server.properties\
-`authorizer.class.name=com.bisnode.kafka.authorization.OpaAuthorizer`
+`authorizer.class.name=org.openpolicyagent.kafka.OpaAuthorizer`
 
 <br />
 The plugin supports the following properties:
@@ -130,7 +130,7 @@ https://kafka.apache.org/24/javadoc/org/apache/kafka/common/resource/ResourceTyp
 
 ### Security protocols:
 
-| Protocol | Decsription |
+| Protocol | Description |
 |---|---|
 | `PLAINTEXT` | Un-authenticated, non-encrypted channel |
 | `SASL_PLAINTEXT` | authenticated, non-encrypted channel |
@@ -167,7 +167,7 @@ The resulting jar (with dependencies embedded) will be named `opa-authorizer-{$V
 
 ## Logging
 
-Set log level `log4j.logger.com.bisnode=INFO` in `config/log4j.properties`
+Set log level `log4j.logger.org.openpolicyagent=INFO` in `config/log4j.properties`
 Use DEBUG or TRACE for debugging.
 
 In a busy Kafka cluster it might be good to tweak the cache since it may produce a lot of log entries in Open Policy Agent, especially if decision logs are turned on. If the policy isn't dynamically updated very often it's recommended to cache a lot to improve performance and reduce the amount of log entries.
