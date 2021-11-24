@@ -15,7 +15,7 @@ Open Policy Agent (OPA) plugin for Kafka authorization.
 
 ###
 
-Download the latest OPA authorizer plugin jar from [Releases](https://github.com/anderseknert/opa-kafka-plugin/releases/) (or [Maven Central](https://search.maven.org/artifact/com.bisnode.kafka.authorization/opa-authorizer)) and put the
+Download the latest OPA authorizer plugin jar from [Releases](https://github.com/anderseknert/opa-kafka-plugin/releases/) (or [Maven Central](https://search.maven.org/artifact/org.openpolicyagent.kafka/opa-authorizer)) and put the
 file (`opa-authorizer-{$VERSION}.jar`) somewhere Kafka recognizes it - this could be directly in Kafka's `libs` directory
 or in a separate plugin directory pointed out to Kafka at startup, e.g:
 
