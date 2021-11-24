@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changes
 
+## [1.3.0] - 2021-11-24
+
+### Changes
+
+- Fix issue where unimplemented `acls` method of authorizer would be called under certain conditions (@iamatwork)
 - Change package group from com.bisnode.kafka.authorization to org.openpolicyagent.kafka
 
 ## [1.2.0] - 2021-10-12
