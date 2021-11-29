@@ -6,7 +6,6 @@ package kafka.authz
 
 default allow = false
 
-# Anything from brokers (ANONYMOUS) is allowed (Other way to identify cluster actions?)
 allow {
 	inter_broker_communication
 }
@@ -46,6 +45,12 @@ inter_broker_communication {
 	input.requestContext.principal.name == "ANONYMOUS"
 }
 
+inter_broker_communication {
+    input.requestContext.securityProtocol == "SSL"
+    input.requestContext.principal.principalType == "User"
+    username == "localhost"
+}
+
 consume(action) {
 	action.operation == "READ"
 }
@@ -68,28 +73,33 @@ any_operation(action) {
 }
 
 as_consumer {
-	re_match(".*-consumer", input.requestContext.principal.name)
+	re_match(".*-consumer", username)
 }
 
 as_producer {
-	re_match(".*-producer", input.requestContext.principal.name)
+	re_match(".*-producer", username)
 }
 
 as_mgmt_user {
-	re_match(".*-mgmt", input.requestContext.principal.name)
+	re_match(".*-mgmt", username)
 }
 
 on_own_topic(action) {
-	owner := trim(input.requestContext.principal.name, "-consumer")
+	owner := trim(username, "-consumer")
 	re_match(owner, action.resourcePattern.name)
 }
 
 on_own_topic(action) {
-	owner := trim(input.requestContext.principal.name, "-producer")
+	owner := trim(username, "-producer")
 	re_match(owner, action.resourcePattern.name)
 }
 
 on_own_topic(action) {
-	owner := trim(input.requestContext.principal.name, "-mgmt")
+	owner := trim(username, "-mgmt")
 	re_match(owner, action.resourcePattern.name)
 }
+
+username = substring(name, 3, count(name)) {
+    name := input.requestContext.principal.name
+    startswith(name, "CN=")
+} else = input.requestContext.principal.name
