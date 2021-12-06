@@ -1,5 +1,7 @@
 package kafka.authz
 
+import future.keywords.in
+
 # ----------------------------------------------------
 #  Policies
 # ----------------------------------------------------
@@ -34,6 +36,11 @@ allow {
 }
 
 allow {
+	input.action.operation == "READ"
+	input.action.resourcePattern.resourceType == "GROUP"
+}
+
+allow {
 	describe(input.action)
 }
 
@@ -46,9 +53,9 @@ inter_broker_communication {
 }
 
 inter_broker_communication {
-    input.requestContext.securityProtocol == "SSL"
-    input.requestContext.principal.principalType == "User"
-    username == "localhost"
+	input.requestContext.securityProtocol == "SSL"
+	input.requestContext.principal.principalType == "User"
+	username == "localhost"
 }
 
 consume(action) {
@@ -68,38 +75,39 @@ describe(action) {
 }
 
 any_operation(action) {
-	all_operations := ["READ", "WRITE", "CREATE", "ALTER", "DESCRIBE", "DELETE"]
-	all_operations[_] == action.operation
+	action.operation in ["READ", "WRITE", "CREATE", "ALTER", "DESCRIBE", "DELETE"]
 }
 
 as_consumer {
-	re_match(".*-consumer", username)
+	regex.match(".*-consumer", username)
 }
 
 as_producer {
-	re_match(".*-producer", username)
+	regex.match(".*-producer", username)
 }
 
 as_mgmt_user {
-	re_match(".*-mgmt", username)
+	regex.match(".*-mgmt", username)
 }
 
 on_own_topic(action) {
 	owner := trim(username, "-consumer")
-	re_match(owner, action.resourcePattern.name)
+	regex.match(owner, action.resourcePattern.name)
 }
 
 on_own_topic(action) {
 	owner := trim(username, "-producer")
-	re_match(owner, action.resourcePattern.name)
+	regex.match(owner, action.resourcePattern.name)
 }
 
 on_own_topic(action) {
 	owner := trim(username, "-mgmt")
-	re_match(owner, action.resourcePattern.name)
+	regex.match(owner, action.resourcePattern.name)
 }
 
 username = substring(name, 3, count(name)) {
-    name := input.requestContext.principal.name
-    startswith(name, "CN=")
-} else = input.requestContext.principal.name
+	name := input.requestContext.principal.name
+	startswith(name, "CN=")
+} else = input.requestContext.principal.name {
+	true
+}
