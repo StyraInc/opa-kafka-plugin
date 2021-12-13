@@ -34,7 +34,7 @@ test_create_own_topic_as_consumer {
 
 # Producers
 test_produce_own_topic_as_producer {
-	allow with input.requestContext.principal.name as "alice-producer"
+	allow with input.requestContext.principal.name as "CN=alice-producer, OU=Developers"
 		 with input.action as {
 			"operation": "WRITE",
 			"resourcePattern": {
@@ -80,7 +80,7 @@ test_anyone_describe_own_topic {
 
 # MGMT User tests
 test_mgmt_user_own_topic_read {
-	allow with input.requestContext.principal.name as "alice-mgmt"
+	allow with input.requestContext.principal.name as "CN=alice-mgmt, O=AcmeCorp"
 		 with input.action as {
 			"operation": "READ",
 			"resourcePattern": {
