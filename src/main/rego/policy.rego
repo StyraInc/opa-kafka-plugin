@@ -105,9 +105,18 @@ on_own_topic(action) {
 	regex.match(owner, action.resourcePattern.name)
 }
 
-username = substring(name, 3, count(name)) {
+username = cn_parts[0] {
 	name := input.requestContext.principal.name
 	startswith(name, "CN=")
-} else = input.requestContext.principal.name {
+	parsed := parse_user(name)
+	cn_parts := split(parsed.CN, ".")
+}
+# If client certificates aren't used for authentication
+else = input.requestContext.principal.name {
 	true
+}
+
+parse_user(user) = {key: value |
+	parts := split(user, ",")
+	[key, value] := split(parts[_], "=")
 }
