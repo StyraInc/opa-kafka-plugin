@@ -11,6 +11,8 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.kafka.common.Endpoint
 import org.apache.kafka.common.acl.{AclBinding, AclBindingFilter, AclOperation}
 import org.apache.kafka.common.message.RequestHeaderData
+import org.apache.kafka.common.metrics.stats.{CumulativeCount, Value}
+import org.apache.kafka.common.metrics.{JmxReporter, KafkaMetricsContext, Metrics, MetricsContext}
 import org.apache.kafka.common.network.ClientInformation
 import org.apache.kafka.common.requests.{RequestContext, RequestHeader}
 import org.apache.kafka.common.resource.{PatternType, ResourcePattern, ResourceType}
@@ -32,10 +34,14 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
   private lazy val allowOnError = config.getOrElse("opa.authorizer.allow.on.error", "false").toBoolean
   private lazy val superUsers = config.getOrElse("super.users", "").split(";").toList
 
+  private var metrics: Option[Metrics] = None
+
+  private lazy val maxCacheCapacity = config.getOrElse("opa.authorizer.cache.maximum.size", "50000").toInt
   private lazy val cache = CacheBuilder.newBuilder
     .initialCapacity(config.getOrElse("opa.authorizer.cache.initial.capacity", "5000").toInt)
-    .maximumSize(config.getOrElse("opa.authorizer.cache.maximum.size", "50000").toInt)
+    .maximumSize(maxCacheCapacity)
     .expireAfterWrite(config.getOrElse("opa.authorizer.cache.expire.after.seconds", "3600").toInt, TimeUnit.SECONDS)
+    .recordStats()
     .build
     .asInstanceOf[Cache[CacheableRequest, Boolean]]
 
@@ -51,9 +57,51 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
   // Not really used but has to be implemented for internal stuff. Can maybe be used to check OPA connectivity?
   // Just doing the same as the acl authorizer does here: https://github.com/apache/kafka/blob/trunk/core/src/main/scala/kafka/security/authorizer/AclAuthorizer.scala#L185
   override def start(authorizerServerInfo: AuthorizerServerInfo): java.util.Map[Endpoint, _ <: CompletionStage[Void] ] = {
+    maybeSetupMetrics(authorizerServerInfo.clusterResource().clusterId(), authorizerServerInfo.brokerId())
     authorizerServerInfo.endpoints.asScala.map { endpoint =>
     endpoint -> CompletableFuture.completedFuture[Void](null) }.toMap.asJava
   }
+
+  private[kafka] def maybeSetupMetrics(clusterId: String, brokerId: Int): Unit ={
+    val isEnabled = config.getOrElse("opa.authorizer.metrics.enabled", "false").toBoolean
+    if (isEnabled){
+      metrics = Option(new Metrics())
+      val jmxReporter = new JmxReporter()
+      jmxReporter.contextChange(createMetricsContext(clusterId, brokerId))
+      metrics.get.addReporter(jmxReporter)
+
+      val authorizedRequestName = metrics.get.metricName(MetricsLabel.AUTHORIZED_REQUEST_COUNT, MetricsLabel.RESULT_GROUP)
+      val authorizedRequestSensor = metrics.get.sensor(MetricsLabel.AUTHORIZED_REQUEST_COUNT)
+      authorizedRequestSensor.add(authorizedRequestName, new CumulativeCount())
+
+      val unauthorizedRequestName = metrics.get.metricName(MetricsLabel.UNAUTHORIZED_REQUEST_COUNT, MetricsLabel.RESULT_GROUP)
+      val unauthorizedRequestSensor = metrics.get.sensor(MetricsLabel.UNAUTHORIZED_REQUEST_COUNT)
+      unauthorizedRequestSensor.add(unauthorizedRequestName, new CumulativeCount())
+
+      val requestToOPAName = metrics.get.metricName(MetricsLabel.REQUEST_TO_OPA_COUNT, MetricsLabel.REQUEST_HANDLE_GROUP)
+      val requestToOPASensor = metrics.get.sensor(MetricsLabel.REQUEST_TO_OPA_COUNT)
+      requestToOPASensor.add(requestToOPAName, new CumulativeCount())
+
+      val cacheHitName = metrics.get.metricName(MetricsLabel.CACHE_HIT_RATE, MetricsLabel.REQUEST_HANDLE_GROUP)
+      val cacheHitSensor = metrics.get.sensor(MetricsLabel.CACHE_HIT_RATE)
+      cacheHitSensor.add(cacheHitName, new Value())
+
+      val cacheUsageName = metrics.get.metricName(MetricsLabel.CACHE_USAGE_PERCENTAGE, MetricsLabel.REQUEST_HANDLE_GROUP)
+      val cacheUsageSensor = metrics.get.sensor(MetricsLabel.CACHE_USAGE_PERCENTAGE)
+      cacheUsageSensor.add(cacheUsageName, new Value())
+
+    }
+  }
+
+  private def createMetricsContext(clusterId: String, brokerId: Int): MetricsContext = {
+    val contextLabels = Map(
+      "kafka.cluster.id" -> clusterId,
+      "kafka.broker.id" -> brokerId.toString
+    ).asJava
+    val prefix = MetricsLabel.NAMESPACE
+    new KafkaMetricsContext(prefix, contextLabels)
+  }
+
 
   @VisibleForTesting
   private[kafka] def getCache = cache
@@ -70,7 +118,18 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
       throw new IllegalArgumentException("Only literal resources are supported. Got: " + resource.patternType)
     }
 
-    doAuthorize(requestContext, action)
+    val result = doAuthorize(requestContext, action)
+
+    if(metrics.isDefined){
+      metrics.get.sensor(MetricsLabel.CACHE_HIT_RATE).record(cache.stats().hitRate())
+      metrics.get.sensor(MetricsLabel.CACHE_USAGE_PERCENTAGE).record(cache.size() / maxCacheCapacity.toDouble)
+      result match {
+        case AuthorizationResult.DENIED => metrics.get.sensor(MetricsLabel.UNAUTHORIZED_REQUEST_COUNT).record()
+        case AuthorizationResult.ALLOWED => metrics.get.sensor(MetricsLabel.AUTHORIZED_REQUEST_COUNT).record()
+      }
+    }
+
+    result
   }
 
   override def authorizeByResourceType(requestContext: AuthorizableRequestContext, op: AclOperation, resourceType: ResourceType): AuthorizationResult = {
@@ -92,7 +151,7 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
 
     def allowAccess = {
       try {
-        cache.get(cachableRequest, new AllowCallable(request, opaUrl, allowOnError))
+        cache.get(cachableRequest, new AllowCallable(request, opaUrl, allowOnError, metrics))
       }
       catch {
         case e: ExecutionException =>
@@ -206,12 +265,15 @@ object AllowCallable {
   private val client = HttpClient.newBuilder.connectTimeout(ofSeconds(5)).build
   private val requestBuilder = HttpRequest.newBuilder.timeout(ofSeconds(5)).header("Content-Type", "application/json")
 }
-class AllowCallable(request: Request, opaUrl: URI, allowOnError: Boolean) extends Callable[Boolean] with LazyLogging {
+class AllowCallable(request: Request, opaUrl: URI, allowOnError: Boolean, metrics: Option[Metrics]) extends Callable[Boolean] with LazyLogging {
   override def call(): Boolean = {
     logger.debug(s"Cache miss, querying OPA for decision")
     val reqJson = AllowCallable.objectMapper.writeValueAsString(request)
     val req = AllowCallable.requestBuilder.uri(opaUrl).POST(BodyPublishers.ofString(reqJson)).build
     logger.debug(s"Querying OPA with object: $reqJson")
+    if(metrics.isDefined){
+      metrics.get.sensor(MetricsLabel.REQUEST_TO_OPA_COUNT).record()
+    }
     val resp = AllowCallable.client.send(req, BodyHandlers.ofString)
     logger.trace(s"Response code: ${resp.statusCode}, body: ${resp.body}")
 

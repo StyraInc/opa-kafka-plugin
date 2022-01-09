@@ -22,6 +22,9 @@ import org.apache.kafka.server.authorizer.{Action, AuthorizationResult}
 import org.scalatest._
 import matchers.should._
 import flatspec._
+
+import java.lang.management.ManagementFactory
+import javax.management.ObjectName
 import scala.jdk.CollectionConverters._
 
 /**
@@ -33,6 +36,7 @@ class OpaAuthorizerSpec extends AnyFlatSpec with Matchers with PrivateMethodTest
 
   private val opaUrl = "http://localhost:8181/v1/data/kafka/authz/allow"
   private val objectMapper = (new ObjectMapper() with ScalaObjectMapper).registerModule(DefaultScalaModule)
+  private val defaultCacheCapacity = 50000
   private lazy val opaResponse = testOpaConnection()
 
   override def withFixture(test: NoArgTest): Outcome = {
@@ -194,12 +198,97 @@ class OpaAuthorizerSpec extends AnyFlatSpec with Matchers with PrivateMethodTest
     opaAuthorizer.getCache.size should be (1)
   }
 
-  def setupAuthorizer(url: String = opaUrl): OpaAuthorizer = {
+  "OpaAuthorizer" should "set up metrics system if enabled" in {
+    val opaAuthorizer = setupAuthorizer(metricsEnabled = true)
+    opaAuthorizer.maybeSetupMetrics("dummy_cluster", 1)
+    val server = ManagementFactory.getPlatformMBeanServer
+    assert(server.isRegistered(new ObjectName(MetricsLabel.NAMESPACE + ":type=" + MetricsLabel.REQUEST_HANDLE_GROUP)))
+    assert(server.isRegistered(new ObjectName(MetricsLabel.NAMESPACE + ":type=" + MetricsLabel.RESULT_GROUP)))
+  }
+
+  "OpaAuthorizer" should "record correct number of authorized request" in {
+    val opaAuthorizer = setupAuthorizer(metricsEnabled = true)
+    opaAuthorizer.maybeSetupMetrics("dummy_cluster", 1)
+
+    val actions = List(
+      createAction("alice-topic", AclOperation.WRITE),
+    )
+    val request = createRequest("alice-producer", actions)
+    opaAuthorizer.authorize(request.requestContext, request.actions.asJava)
+
+    val server = ManagementFactory.getPlatformMBeanServer
+    val authorizedRequestCountActual = server.getAttribute(
+      new ObjectName(MetricsLabel.NAMESPACE + ":type=" + MetricsLabel.RESULT_GROUP),
+      MetricsLabel.AUTHORIZED_REQUEST_COUNT)
+    assert(authorizedRequestCountActual == 1.0)
+
+    val unauthorizedRequestCountActual = server.getAttribute(
+      new ObjectName(MetricsLabel.NAMESPACE + ":type=" + MetricsLabel.RESULT_GROUP),
+      MetricsLabel.UNAUTHORIZED_REQUEST_COUNT)
+    assert(unauthorizedRequestCountActual == 0.0)
+  }
+
+  "OpaAuthorizer" should "record correct number of unauthorized request" in {
+    val opaAuthorizer = setupAuthorizer(metricsEnabled = true)
+    opaAuthorizer.maybeSetupMetrics("dummy_cluster", 1)
+
+    val actions = List(
+      createAction("bob-topic", AclOperation.WRITE),
+    )
+    val request = createRequest("alice-producer", actions)
+    opaAuthorizer.authorize(request.requestContext, request.actions.asJava)
+
+    val server = ManagementFactory.getPlatformMBeanServer
+    val authorizedRequestCountActual = server.getAttribute(
+      new ObjectName(MetricsLabel.NAMESPACE + ":type=" + MetricsLabel.RESULT_GROUP),
+      MetricsLabel.AUTHORIZED_REQUEST_COUNT)
+    assert(authorizedRequestCountActual == 0.0)
+
+    val unauthorizedRequestCountActual = server.getAttribute(
+      new ObjectName(MetricsLabel.NAMESPACE + ":type=" + MetricsLabel.RESULT_GROUP),
+      MetricsLabel.UNAUTHORIZED_REQUEST_COUNT)
+    assert(unauthorizedRequestCountActual == 1.0)
+  }
+
+  "OpaAuthorizer" should "record correct usage statistic of cache and request to OPA" in {
+    val opaAuthorizer = setupAuthorizer(metricsEnabled = true)
+    opaAuthorizer.maybeSetupMetrics("dummy_cluster", 1)
+
+    val actions = List(
+      createAction("alice-topic", AclOperation.WRITE),
+    )
+    val request = createRequest("alice-producer", actions)
+    for (_ <- 1 until 5) {
+      opaAuthorizer.authorize(request.requestContext, request.actions.asJava)
+    }
+
+    val server = ManagementFactory.getPlatformMBeanServer
+    val requestToOPACountActual = server.getAttribute(
+      new ObjectName(MetricsLabel.NAMESPACE + ":type=" + MetricsLabel.REQUEST_HANDLE_GROUP),
+      MetricsLabel.REQUEST_TO_OPA_COUNT)
+    assert(requestToOPACountActual == 1.0)
+
+    val cacheHitRateActual = server.getAttribute(
+      new ObjectName(MetricsLabel.NAMESPACE + ":type=" + MetricsLabel.REQUEST_HANDLE_GROUP),
+      MetricsLabel.CACHE_HIT_RATE)
+    assert(cacheHitRateActual == opaAuthorizer.getCache.stats().hitRate())
+
+    val cacheUsagePercentageActual = server.getAttribute(
+      new ObjectName(MetricsLabel.NAMESPACE + ":type=" + MetricsLabel.REQUEST_HANDLE_GROUP),
+      MetricsLabel.CACHE_USAGE_PERCENTAGE)
+    assert(cacheUsagePercentageActual == (opaAuthorizer.getCache.size() / defaultCacheCapacity.toDouble))
+  }
+
+
+  def setupAuthorizer(url: String = opaUrl, metricsEnabled: Boolean = false): OpaAuthorizer = {
     val opaAuthorizer = new OpaAuthorizer()
     val config = new java.util.HashMap[String, String]
     config.put("opa.authorizer.url", url)
     config.put("opa.authorizer.allow.on.error", "false")
     config.put("super.users", "User:CN=my-user;User:CN=my-user2,O=my-org")
+    if(metricsEnabled) {
+      config.put("opa.authorizer.metrics.enabled", "true")
+    }
     opaAuthorizer.configure(config)
     opaAuthorizer
   }
