@@ -33,10 +33,10 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
   private lazy val opaUrl = new URL(config("opa.authorizer.url")).toURI
   private lazy val allowOnError = config.getOrElse("opa.authorizer.allow.on.error", "false").toBoolean
   private lazy val superUsers = config.getOrElse("super.users", "").split(";").toList
+  private lazy val maxCacheCapacity = config.getOrElse("opa.authorizer.cache.maximum.size", "50000").toInt
 
   private var metrics: Option[Metrics] = None
 
-  private lazy val maxCacheCapacity = config.getOrElse("opa.authorizer.cache.maximum.size", "50000").toInt
   private lazy val cache = CacheBuilder.newBuilder
     .initialCapacity(config.getOrElse("opa.authorizer.cache.initial.capacity", "5000").toInt)
     .maximumSize(maxCacheCapacity)
