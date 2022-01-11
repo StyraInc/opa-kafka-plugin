@@ -8,7 +8,7 @@ plugins {
 }
 
 group 'org.openpolicyagent.kafka'
-version '1.3.0'
+version '1.4.0'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_11
@@ -65,7 +65,7 @@ publishing {
         mavenJava(MavenPublication) {
             groupId ='org.openpolicyagent.kafka'
             artifactId = 'opa-authorizer'
-            version = '1.3.0'
+            version = '1.4.0'
 
             from components.java
 
