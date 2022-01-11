@@ -34,6 +34,7 @@ The plugin supports the following properties:
 | `opa.authorizer.cache.initial.capacity` | `5000` | `5000` | Initial decision cache size. |
 | `opa.authorizer.cache.maximum.size` | `50000` | `50000` | Max decision cache size. |
 | `opa.authorizer.cache.expire.after.seconds` | `3600` | `3600` | Decision cache expiry in seconds. |
+| `opa.authorizer.metrics.enabled` | `true` | `false` | Whether or not expose JMX metrics for monitoring. |
 | `super.users` | `User:alice;User:bob` |  | Super users which are always allowed. |
 
 ## Usage
@@ -171,3 +172,13 @@ Set log level `log4j.logger.org.openpolicyagent=INFO` in `config/log4j.propertie
 Use DEBUG or TRACE for debugging.
 
 In a busy Kafka cluster it might be good to tweak the cache since it may produce a lot of log entries in Open Policy Agent, especially if decision logs are turned on. If the policy isn't dynamically updated very often it's recommended to cache a lot to improve performance and reduce the amount of log entries.
+
+## Monitoring
+The plugin exposes some metrics that can be useful in operation.
+* `opa.authorizer:type=authorization-result`
+    * `authorized-request-count`: number of allowed requests
+    * `unauthorized-request-count`: number of denied requests
+* `opa.authorizer:type=request-handle`
+    * `request-to-opa-count`: number of HTTP request sent to OPA to get authorization result
+    * `cache-hit-rate`: Cache hit rate. Cache miss rate should be `1 - cache-hit-rate`
+    * `cache-usage-percentage`: the ratio of cache size over maximum cache capacity
