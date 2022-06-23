@@ -36,6 +36,8 @@ The plugin supports the following properties:
 | `opa.authorizer.cache.expire.after.seconds` | `3600` | `3600` | Decision cache expiry in seconds. |
 | `opa.authorizer.metrics.enabled` | `true` | `false` | Whether or not expose JMX metrics for monitoring. |
 | `super.users` | `User:alice;User:bob` |  | Super users which are always allowed. |
+| `opa.authorizer.truststore.path` | `/path/to/mytruststore.p12` |  | Path to the PKCS12 truststore for HTTPS requests to OPA. |
+| `opa.authorizer.truststore.password` | `ichangedit` | `changeit` | Password for the truststore. |
 
 ## Usage
 

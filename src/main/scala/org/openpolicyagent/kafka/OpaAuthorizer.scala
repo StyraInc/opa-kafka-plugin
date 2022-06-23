@@ -19,12 +19,15 @@ import org.apache.kafka.common.resource.{PatternType, ResourcePattern, ResourceT
 import org.apache.kafka.common.security.auth.KafkaPrincipal
 import org.apache.kafka.server.authorizer._
 
+import java.io.{File, FileInputStream}
 import java.net.http.HttpRequest.BodyPublishers
 import java.net.http.HttpResponse.BodyHandlers
 import java.net.http.{HttpClient, HttpRequest}
 import java.net.{URI, URL}
+import java.security.KeyStore
 import java.time.Duration.ofSeconds
 import java.util.concurrent._
+import javax.net.ssl.{KeyManagerFactory, SSLContext, TrustManagerFactory}
 import scala.jdk.CollectionConverters._
 
 //noinspection NotImplementedCode
@@ -34,6 +37,8 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
   private lazy val allowOnError = config.getOrElse("opa.authorizer.allow.on.error", "false").toBoolean
   private lazy val superUsers = config.getOrElse("super.users", "").split(";").toList
   private lazy val maxCacheCapacity = config.getOrElse("opa.authorizer.cache.maximum.size", "50000").toInt
+  private lazy val trustStorePath = config.get("opa.authorizer.truststore.path")
+  private lazy val trustStorePassword = config.get("opa.authorizer.truststore.password")
 
   private var metrics: Option[Metrics] = None
 
@@ -52,6 +57,35 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
   override def configure(configs: java.util.Map[String, _]): Unit = {
     logger.debug(s"Call to configure() with config $configs")
     config = configs.asScala.view.mapValues(_.asInstanceOf[String]).toMap
+
+    if (trustStorePath.isDefined) {
+      logger.info(s"Enabling TLS truststore")
+
+      if (trustStorePassword.isEmpty) {
+        logger.info("property 'opa.authorizer.truststore.password' not set. using default!");
+      }
+
+      try {
+        val ks = KeyStore.getInstance(KeyStore.getDefaultType)
+
+        val inputStream = new FileInputStream(new File(trustStorePath.getOrElse("")))
+        ks.load(inputStream, trustStorePassword.getOrElse("changeit").toArray)
+
+        inputStream.close();
+
+        val tmf = TrustManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm)
+        tmf.init(ks)
+
+        val trustManager = tmf.getTrustManagers
+
+        val sslContext = SSLContext.getInstance("TLS")
+        sslContext.init(Array(), trustManager, null)
+
+        AllowCallable.client = HttpClient.newBuilder.sslContext(sslContext).connectTimeout(ofSeconds(5)).build
+      } catch {
+        case e: Throwable => logger.error("Failed to load truststore", e);
+      }
+    }
   }
 
   // Not really used but has to be implemented for internal stuff. Can maybe be used to check OPA connectivity?
@@ -262,8 +296,8 @@ object AllowCallable {
     .addSerializer(classOf[RequestHeader], new RequestHeaderSerializer)
     .addSerializer(classOf[RequestHeaderData], new RequestHeaderDataSerializer)
   private val objectMapper = JsonMapper.builder().addModule(requestSerializerModule).addModule(DefaultScalaModule).build()
-  private val client = HttpClient.newBuilder.connectTimeout(ofSeconds(5)).build
-  private val requestBuilder = HttpRequest.newBuilder.timeout(ofSeconds(5)).header("Content-Type", "application/json")
+  var client = HttpClient.newBuilder.connectTimeout(ofSeconds(5)).build
+  val requestBuilder = HttpRequest.newBuilder.timeout(ofSeconds(5)).header("Content-Type", "application/json")
 }
 class AllowCallable(request: Request, opaUrl: URI, allowOnError: Boolean, metrics: Option[Metrics]) extends Callable[Boolean] with LazyLogging {
   override def call(): Boolean = {
