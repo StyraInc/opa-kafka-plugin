@@ -39,6 +39,7 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
   private lazy val maxCacheCapacity = config.getOrElse("opa.authorizer.cache.maximum.size", "50000").toInt
   private lazy val trustStorePath = config.get("opa.authorizer.truststore.path")
   private lazy val trustStorePassword = config.get("opa.authorizer.truststore.password")
+  private lazy val trustStoreType = config.get("opa.authorizer.truststore.type")
 
   private var metrics: Option[Metrics] = None
 
@@ -66,7 +67,7 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
       }
 
       try {
-        val ks = KeyStore.getInstance(KeyStore.getDefaultType)
+        val ks = KeyStore.getInstance(trustStoreType.getOrElse("PKCS12"))
 
         val inputStream = new FileInputStream(new File(trustStorePath.getOrElse("")))
         ks.load(inputStream, trustStorePassword.getOrElse("changeit").toArray)
@@ -81,6 +82,7 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
         val sslContext = SSLContext.getInstance("TLS")
         sslContext.init(Array(), trustManager, null)
 
+        // replaces the HttpClient initialized in AllowCallable
         AllowCallable.client = HttpClient.newBuilder.sslContext(sslContext).connectTimeout(ofSeconds(5)).build
       } catch {
         case e: Throwable => logger.error("Failed to load truststore", e);
@@ -296,6 +298,9 @@ object AllowCallable {
     .addSerializer(classOf[RequestHeader], new RequestHeaderSerializer)
     .addSerializer(classOf[RequestHeaderData], new RequestHeaderDataSerializer)
   private val objectMapper = JsonMapper.builder().addModule(requestSerializerModule).addModule(DefaultScalaModule).build()
+
+  // If a TrusStore is configured by the user,
+  // This HttpClient is replaced by OpaAuthorizer.configure()
   var client = HttpClient.newBuilder.connectTimeout(ofSeconds(5)).build
   val requestBuilder = HttpRequest.newBuilder.timeout(ofSeconds(5)).header("Content-Type", "application/json")
 }

@@ -38,6 +38,7 @@ The plugin supports the following properties:
 | `super.users` | `User:alice;User:bob` |  | Super users which are always allowed. |
 | `opa.authorizer.truststore.path` | `/path/to/mytruststore.p12` |  | Path to the PKCS12 truststore for HTTPS requests to OPA. |
 | `opa.authorizer.truststore.password` | `ichangedit` | `changeit` | Password for the truststore. |
+| `opa.authorizer.truststore.type` | `PKCS12`, `JKS` or whatever your JVM supports | `PKCS12` | Type of the truststore. |
 
 ## Usage
 
