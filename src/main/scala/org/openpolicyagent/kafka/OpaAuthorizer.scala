@@ -302,13 +302,13 @@ object AllowCallable {
   // If a TrusStore is configured by the user,
   // This HttpClient is replaced by OpaAuthorizer.configure()
   var client = HttpClient.newBuilder.connectTimeout(ofSeconds(5)).build
-  val requestBuilder = HttpRequest.newBuilder.timeout(ofSeconds(5)).header("Content-Type", "application/json")
 }
 class AllowCallable(request: Request, opaUrl: URI, allowOnError: Boolean, metrics: Option[Metrics]) extends Callable[Boolean] with LazyLogging {
   override def call(): Boolean = {
     logger.debug(s"Cache miss, querying OPA for decision")
     val reqJson = AllowCallable.objectMapper.writeValueAsString(request)
-    val req = AllowCallable.requestBuilder.uri(opaUrl).POST(BodyPublishers.ofString(reqJson)).build
+    val requestBuilder = HttpRequest.newBuilder.timeout(ofSeconds(5)).header("Content-Type", "application/json")
+    val req = requestBuilder.uri(opaUrl).POST(BodyPublishers.ofString(reqJson)).build
     logger.debug(s"Querying OPA with object: $reqJson")
     if(metrics.isDefined){
       metrics.get.sensor(MetricsLabel.REQUEST_TO_OPA_COUNT).record()
