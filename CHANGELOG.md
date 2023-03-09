@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2023-03-09
+
+- Move construction of request builder to `AllowCallable` `call` method to avoid it being shared between threads [#47](https://github.com/StyraInc/opa-kafka-plugin/pull/47) ([@xhl1988](https://github.com/@xhl1988))
+
 ## [1.5.0] - 2022-10-10
 
 - Add configuration properties (opa.authorizer.truststore.*) for truststore for HTTPS connections to OPA ([@iamatwork](https://github.com/@iamatwork))
