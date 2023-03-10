@@ -101,7 +101,7 @@ The following table summarizes the supported resource types and operation names.
 | `TRANSACTIONAL_ID` | `DESCRIBE` |
 | `TRANSACTIONAL_ID` | `WRITE` |
 
-These are handled by the method _authorizeAction_, and passed to OPA with an _action_, that identifies 
+These are handled by the method _authorizeAction_, and passed to OPA with an _action_, that identifies
 the accessed resource and the performed operation. _patternType_ is always _LITERAL_.
 
 Creation of a topic checks for CLUSTER + CREATE. If this is denied, it will check for TOPIC with its name + CREATE.
@@ -185,3 +185,7 @@ The plugin exposes some metrics that can be useful in operation.
     * `request-to-opa-count`: number of HTTP request sent to OPA to get authorization result
     * `cache-hit-rate`: Cache hit rate. Cache miss rate should be `1 - cache-hit-rate`
     * `cache-usage-percentage`: the ratio of cache size over maximum cache capacity
+
+## Community
+
+For questions, discussions and announcements related to Styra products, services and open source projects, please join the Styra community on [Slack](https://join.slack.com/t/styracommunity/shared_invite/zt-1p81qz8g4-t2OLKbvw0J5ibdcNc62~6Q)!
