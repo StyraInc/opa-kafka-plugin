@@ -40,6 +40,7 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
   private lazy val trustStorePath = config.get("opa.authorizer.truststore.path")
   private lazy val trustStorePassword = config.get("opa.authorizer.truststore.password")
   private lazy val trustStoreType = config.get("opa.authorizer.truststore.type")
+  private lazy val skipAuthForDescribeRequests = config.getOrElse("opa.authorizer.skip.auth.for.describe.requests", "false").toBoolean
 
   private var metrics: Option[Metrics] = None
 
@@ -152,6 +153,10 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
     val resource = action.resourcePattern
     if (resource.patternType != PatternType.LITERAL) {
       throw new IllegalArgumentException("Only literal resources are supported. Got: " + resource.patternType)
+    }
+
+    if (action.operation == AclOperation.DESCRIBE && skipAuthForDescribeRequests) {
+      return AuthorizationResult.ALLOWED
     }
 
     val result = doAuthorize(requestContext, action)

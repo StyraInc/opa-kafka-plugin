@@ -153,6 +153,17 @@ class OpaAuthorizerSpec extends AnyFlatSpec with Matchers with PrivateMethodTest
     opaAuthorizer.getCache.size should be (2)
   }
 
+  "OpaAuthorizer" should "skip auth for DESCRIBE request if it is enabled in settings" in {
+    val opaAuthorizer = setupAuthorizer(skipAuthForDescribeRequests = true)
+    val actions = List(
+      createAction("alice-topic", AclOperation.DESCRIBE),
+    )
+    val request = createRequest("alice-consumer", actions)
+
+    opaAuthorizer.authorize(request.requestContext, request.actions.asJava) should be (List(AuthorizationResult.ALLOWED).asJava)
+    opaAuthorizer.getCache.size should be (0)
+  }
+
   "OpaAuthorizer" should "not cache decisions while errors occur" in {
     val opaAuthorizer = setupAuthorizer("http://localhost/broken")
     val actions = List(
@@ -280,14 +291,17 @@ class OpaAuthorizerSpec extends AnyFlatSpec with Matchers with PrivateMethodTest
   }
 
 
-  def setupAuthorizer(url: String = opaUrl, metricsEnabled: Boolean = false): OpaAuthorizer = {
+  def setupAuthorizer(url: String = opaUrl, metricsEnabled: Boolean = false, skipAuthForDescribeRequests: Boolean = false): OpaAuthorizer = {
     val opaAuthorizer = new OpaAuthorizer()
     val config = new java.util.HashMap[String, String]
     config.put("opa.authorizer.url", url)
     config.put("opa.authorizer.allow.on.error", "false")
     config.put("super.users", "User:CN=my-user;User:CN=my-user2,O=my-org")
-    if(metricsEnabled) {
+    if (metricsEnabled) {
       config.put("opa.authorizer.metrics.enabled", "true")
+    }
+    if (skipAuthForDescribeRequests) {
+      config.put("opa.authorizer.skip.auth.for.describe.requests", "true")
     }
     opaAuthorizer.configure(config)
     opaAuthorizer

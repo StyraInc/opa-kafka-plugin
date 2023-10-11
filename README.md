@@ -27,18 +27,19 @@ To activate the opa-kafka-plugin add the `authorizer.class.name` to server.prope
 <br />
 The plugin supports the following properties:
 
-| Property Key | Example | Default | Description |
-| --- | --- | --- | --- |
-| `opa.authorizer.url` | `http://opa:8181/v1/data/kafka/authz/allow` |  | Name of the OPA policy to query. [required] |
-| `opa.authorizer.allow.on.error` | `false` | `false` | Fail-closed or fail-open if OPA call fails. |
-| `opa.authorizer.cache.initial.capacity` | `5000` | `5000` | Initial decision cache size. |
-| `opa.authorizer.cache.maximum.size` | `50000` | `50000` | Max decision cache size. |
-| `opa.authorizer.cache.expire.after.seconds` | `3600` | `3600` | Decision cache expiry in seconds. |
-| `opa.authorizer.metrics.enabled` | `true` | `false` | Whether or not expose JMX metrics for monitoring. |
-| `super.users` | `User:alice;User:bob` |  | Super users which are always allowed. |
-| `opa.authorizer.truststore.path` | `/path/to/mytruststore.p12` |  | Path to the PKCS12 truststore for HTTPS requests to OPA. |
-| `opa.authorizer.truststore.password` | `ichangedit` | `changeit` | Password for the truststore. |
-| `opa.authorizer.truststore.type` | `PKCS12`, `JKS` or whatever your JVM supports | `PKCS12` | Type of the truststore. |
+| Property Key                                     | Example | Default | Description |
+|--------------------------------------------------| --- | --- | --- |
+| `opa.authorizer.url`                             | `http://opa:8181/v1/data/kafka/authz/allow` |  | Name of the OPA policy to query. [required] |
+| `opa.authorizer.allow.on.error`                  | `false` | `false` | Fail-closed or fail-open if OPA call fails. |
+| `opa.authorizer.skip.auth.for.describe.requests` | `true` | `false` | Skip authorization for describe requests. |
+| `opa.authorizer.cache.initial.capacity`          | `5000` | `5000` | Initial decision cache size. |
+| `opa.authorizer.cache.maximum.size`              | `50000` | `50000` | Max decision cache size. |
+| `opa.authorizer.cache.expire.after.seconds`      | `3600` | `3600` | Decision cache expiry in seconds. |
+| `opa.authorizer.metrics.enabled`                 | `true` | `false` | Whether or not expose JMX metrics for monitoring. |
+| `super.users`                                    | `User:alice;User:bob` |  | Super users which are always allowed. |
+| `opa.authorizer.truststore.path`                 | `/path/to/mytruststore.p12` |  | Path to the PKCS12 truststore for HTTPS requests to OPA. |
+| `opa.authorizer.truststore.password`             | `ichangedit` | `changeit` | Password for the truststore. |
+| `opa.authorizer.truststore.type`                 | `PKCS12`, `JKS` or whatever your JVM supports | `PKCS12` | Type of the truststore. |
 
 ## Usage
 
