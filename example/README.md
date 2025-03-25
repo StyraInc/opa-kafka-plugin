@@ -29,7 +29,7 @@ and assume the Kafka root directory as the current working directory.
 Using `alice-mgmt` or `alice-producer`:
 
 ```shell
-bin/kafka-console-producer.sh --broker-list localhost:9093 --topic alice-topic1 --producer.config path/to/cert/client/alice-mgmt.properties
+bin/kafka-console-producer.sh --bootstrap-server localhost:9093 --topic alice-topic1 --producer.config path/to/cert/client/alice-mgmt.properties
 > My first message
 > My second message
 ...
@@ -40,13 +40,11 @@ Ctrl+c
 
 ```shell
 
-bin/kafka-console-producer.sh --broker-list localhost:9093 --topic alice-topic1 --producer.config path/to/cert/client/alice-consumer.properties
+bin/kafka-console-producer.sh --bootstrap-server localhost:9093 --topic alice-topic1 --producer.config path/to/cert/client/alice-consumer.properties
 > My first message
 >[2021-12-01 09:43:45,437] ERROR Error when sending message to topic alice-topic1 with key: null, value: 8 bytes with error: (org.apache.kafka.clients.producer.internals.ErrorLoggingCallback)
 org.apache.kafka.common.errors.TopicAuthorizationException: Not authorized to access topics: [alice-topic1
 ```
-
-
 
 ### Consuming from a topic
 
