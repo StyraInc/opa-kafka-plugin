@@ -5,12 +5,12 @@ package kafka.authz
 # --------------------------------------------------
 
 # Brokers
-test_inter_broker_communication {
+test_inter_broker_communication if {
 	allow with input.requestContext.principal.name as "ANONYMOUS"
 }
 
 # Consumers
-test_consume_own_topic_as_consumer {
+test_consume_own_topic_as_consumer if {
 	allow with input.requestContext.principal.name as "alice-consumer"
 		 with input.action as {
 			"operation": "READ",
@@ -21,7 +21,7 @@ test_consume_own_topic_as_consumer {
 		}
 }
 
-test_create_own_topic_as_consumer {
+test_create_own_topic_as_consumer if {
 	allow with input.requestContext.principal.name as "alice-consumer"
 		 with input.action as {
 			"operation": "CREATE",
@@ -33,7 +33,7 @@ test_create_own_topic_as_consumer {
 }
 
 # Producers
-test_produce_own_topic_as_producer {
+test_produce_own_topic_as_producer if {
 	allow with input.requestContext.principal.name as "CN=alice-producer, OU=Developers"
 		 with input.action as {
 			"operation": "WRITE",
@@ -44,7 +44,7 @@ test_produce_own_topic_as_producer {
 		}
 }
 
-test_create_own_topic_as_producer {
+test_create_own_topic_as_producer if {
 	allow with input.requestContext.principal.name as "alice-producer"
 		 with input.action as {
 			"operation": "CREATE",
@@ -56,7 +56,7 @@ test_create_own_topic_as_producer {
 }
 
 # Global access
-test_anyone_describe_some_topic {
+test_anyone_describe_some_topic if {
 	allow with input.requestContext.principal.name as "alice-producer"
 		 with input.action as {
 			"operation": "DESCRIBE",
@@ -67,7 +67,7 @@ test_anyone_describe_some_topic {
 		}
 }
 
-test_anyone_describe_own_topic {
+test_anyone_describe_own_topic if {
 	allow with input.requestContext.principal.name as "alice-producer"
 		 with input.action as {
 			"operation": "DESCRIBE",
@@ -79,7 +79,7 @@ test_anyone_describe_own_topic {
 }
 
 # MGMT User tests
-test_mgmt_user_own_topic_read {
+test_mgmt_user_own_topic_read if {
 	allow with input.requestContext.principal.name as "CN=alice-mgmt, O=AcmeCorp"
 		 with input.action as {
 			"operation": "READ",
@@ -90,7 +90,7 @@ test_mgmt_user_own_topic_read {
 		}
 }
 
-test_mgmt_user_own_topic_write {
+test_mgmt_user_own_topic_write if {
 	allow with input.requestContext.principal.name as "alice-mgmt"
 		 with input.action as {
 			"operation": "WRITE",
@@ -101,7 +101,7 @@ test_mgmt_user_own_topic_write {
 		}
 }
 
-test_mgmt_user_own_topic_create {
+test_mgmt_user_own_topic_create if {
 	allow with input.requestContext.principal.name as "alice-mgmt"
 		 with input.action as {
 			"operation": "CREATE",
@@ -112,7 +112,7 @@ test_mgmt_user_own_topic_create {
 		}
 }
 
-test_mgmt_user_own_topic_delete {
+test_mgmt_user_own_topic_delete if {
 	allow with input.requestContext.principal.name as "alice-mgmt"
 		 with input.action as {
 			"operation": "DELETE",
@@ -123,7 +123,7 @@ test_mgmt_user_own_topic_delete {
 		}
 }
 
-test_mgmt_user_own_topic_describe {
+test_mgmt_user_own_topic_describe if {
 	allow with input.requestContext.principal.name as "alice-mgmt"
 		 with input.action as {
 			"operation": "DESCRIBE",
@@ -134,7 +134,7 @@ test_mgmt_user_own_topic_describe {
 		}
 }
 
-test_mgmt_user_own_topic_alter {
+test_mgmt_user_own_topic_alter if {
 	allow with input.requestContext.principal.name as "alice-mgmt"
 		 with input.action as {
 			"operation": "ALTER",
@@ -145,11 +145,24 @@ test_mgmt_user_own_topic_alter {
 		}
 }
 
+# Anyone can do idemportent write
+test_anyone_describe_some_topic if {
+	allow with input.requestContext.principal.name as "alice-producer"
+		 with input.action as {
+			"operation": "IDEMPOTENT_WRITE",
+			"resourcePattern": {
+			    "name": "kafka-cluster",
+			    "patternType": "LITERAL",
+			    "resourceType": "CLUSTER",
+			},
+		}
+}
+
 # --------------------------------------------------
 #   Negative test
 # --------------------------------------------------
 
-test_consume_own_topic_as_producer {
+test_consume_own_topic_as_producer if {
 	not allow with input.requestContext.principal.name as "alice-producer"
 		 with input.action as {
 			"operation": "READ",
@@ -160,7 +173,7 @@ test_consume_own_topic_as_producer {
 		}
 }
 
-test_consume_someone_elses_topic_as_producer {
+test_consume_someone_elses_topic_as_producer if {
 	not allow with input.requestContext.principal.name as "alice-producer"
 		 with input.action as {
 			"operation": "READ",
@@ -171,7 +184,7 @@ test_consume_someone_elses_topic_as_producer {
 		}
 }
 
-test_consume_someone_elses_topic_as_consumer {
+test_consume_someone_elses_topic_as_consumer if {
 	not allow with input.requestContext.principal.name as "alice-consumer"
 		 with input.action as {
 			"operation": "READ",
@@ -182,7 +195,7 @@ test_consume_someone_elses_topic_as_consumer {
 		}
 }
 
-test_produce_own_topic_as_consumer {
+test_produce_own_topic_as_consumer if {
 	not allow with input.requestContext.principal.name as "alice-consumer"
 		 with input.action as {
 			"operation": "WRITE",
@@ -193,7 +206,7 @@ test_produce_own_topic_as_consumer {
 		}
 }
 
-test_produce_someone_elses_topic_as_consumer {
+test_produce_someone_elses_topic_as_consumer if {
 	not allow with input.requestContext.principal.name as "alice-consumer"
 		 with input.action as {
 			"operation": "WRITE",
@@ -204,7 +217,7 @@ test_produce_someone_elses_topic_as_consumer {
 		}
 }
 
-test_produce_someone_elses_topic_as_producer {
+test_produce_someone_elses_topic_as_producer if {
 	not allow with input.requestContext.principal.name as "alice-producer"
 		 with input.action as {
 			"operation": "WRITE",
@@ -215,7 +228,7 @@ test_produce_someone_elses_topic_as_producer {
 		}
 }
 
-test_create_someone_elses_topic_as_producer {
+test_create_someone_elses_topic_as_producer if {
 	not allow with input.requestContext.principal.name as "alice-producer"
 		 with input.action as {
 			"operation": "CREATE",
@@ -226,7 +239,7 @@ test_create_someone_elses_topic_as_producer {
 		}
 }
 
-test_create_someone_elses_topic_as_consumer {
+test_create_someone_elses_topic_as_consumer if {
 	not allow with input.requestContext.principal.name as "alice-producer"
 		 with input.action as {
 			"operation": "CREATE",
@@ -238,7 +251,7 @@ test_create_someone_elses_topic_as_consumer {
 }
 
 # MGMT User tests
-test_mgmt_user_other_topic_read {
+test_mgmt_user_other_topic_read if {
 	not allow with input.requestContext.principal.name as "alice-mgmt"
 		 with input.action as {
 			"operation": "READ",
@@ -249,7 +262,7 @@ test_mgmt_user_other_topic_read {
 		}
 }
 
-test_mgmt_user_other_topic_write {
+test_mgmt_user_other_topic_write if {
 	not allow with input.requestContext.principal.name as "alice-mgmt"
 		 with input.action as {
 			"operation": "WRITE",
@@ -260,7 +273,7 @@ test_mgmt_user_other_topic_write {
 		}
 }
 
-test_mgmt_user_other_topic_create {
+test_mgmt_user_other_topic_create if {
 	not allow with input.requestContext.principal.name as "alice-mgmt"
 		 with input.action as {
 			"operation": "CREATE",
@@ -271,7 +284,7 @@ test_mgmt_user_other_topic_create {
 		}
 }
 
-test_mgmt_user_other_topic_delete {
+test_mgmt_user_other_topic_delete if {
 	not allow with input.requestContext.principal.name as "alice-mgmt"
 		 with input.action as {
 			"operation": "DELETE",
@@ -282,7 +295,7 @@ test_mgmt_user_other_topic_delete {
 		}
 }
 
-test_mgmt_user_other_topic_alter {
+test_mgmt_user_other_topic_alter if {
 	not allow with input.requestContext.principal.name as "alice-mgmt"
 		 with input.action as {
 			"operation": "ALTER",

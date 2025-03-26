@@ -106,7 +106,7 @@ the accessed resource and the performed operation. _patternType_ is always _LITE
 
 Creation of a topic checks for CLUSTER + CREATE. If this is denied, it will check for TOPIC with its name + CREATE.
 
-When doing idepotent write to a topic, and the first request for operation=IDEMPOTENT_WRITE on the resourceType=CLUSTER is denied,
+When doing idempotent write to a topic, and the first request for operation=IDEMPOTENT_WRITE on the resourceType=CLUSTER is denied,
 the method _authorizeByResourceType_ to check, if the user has the right to write to any topic.
 If yes, the idempotent write is granted by Kafka's ACL-implementation. To allow for a similar check,
 it is mapped to OPA with _patternType=PREFIXED_, _resourceType=TOPIC_, and _name=""_.
