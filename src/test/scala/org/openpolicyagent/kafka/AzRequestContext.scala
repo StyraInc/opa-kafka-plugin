@@ -20,4 +20,5 @@ case class AzServerInfo(
   brokerId: Int,
   clusterResource: ClusterResource,
   endpoints: Collection[Endpoint],
-  interBrokerEndpoint: Endpoint) extends AuthorizerServerInfo
+  interBrokerEndpoint: Endpoint,
+  earlyStartListeners: Collection[String]) extends AuthorizerServerInfo

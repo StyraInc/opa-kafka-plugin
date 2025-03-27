@@ -19,32 +19,29 @@ services:
       - "--set=bundles.authz.resource=bundle.tar.gz"
     depends_on:
       - nginx
-  zookeeper:
-    image: confluentinc/cp-zookeeper:6.2.1
-    ports:
-      - "2181:2181"
-    environment:
-      - ALLOW_ANONYMOUS_LOGIN=yes
-      - ZOOKEEPER_CLIENT_PORT=2181
   broker:
     # If experiencing hangs on darwin/arm64, explicitly setting the platform here seems to help
     # platform: linux/amd64
-    image: confluentinc/cp-kafka:6.2.1
+    image: apache/kafka:4.0.0
     ports:
-      - "9093:9093"
+    - "9093:9093"
     environment:
       CLASSPATH: "/plugin/*"
       KAFKA_AUTHORIZER_CLASS_NAME: org.openpolicyagent.kafka.OpaAuthorizer
       KAFKA_OPA_AUTHORIZER_URL: http://opa:8181/v1/data/kafka/authz/allow
       KAFKA_OPA_AUTHORIZER_CACHE_EXPIRE_AFTER_SECONDS: 10 # For development only
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: CONTROLLER://broker:9092,SSL://broker:9093
       KAFKA_ADVERTISED_LISTENERS: SSL://localhost:9093
-      KAFKA_SECURITY_INTER_BROKER_PROTOCOL: SSL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: SSL
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,SSL:SSL
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@broker:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_SSL_KEYSTORE_FILENAME: server.keystore
       KAFKA_SSL_KEYSTORE_CREDENTIALS: credentials.txt
@@ -57,4 +54,3 @@ services:
       - "./cert/server:/etc/kafka/secrets"
     depends_on:
       - opa
-      - zookeeper

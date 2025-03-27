@@ -3,14 +3,14 @@ package org.openpolicyagent.kafka
 import java.net.InetAddress
 import java.util
 import java.util.concurrent.TimeUnit
-
-import kafka.network.RequestChannel
 import org.apache.kafka.common.acl.AclOperation
 import org.apache.kafka.common.resource.ResourcePattern
 import org.apache.kafka.common.resource.PatternType
 import org.apache.kafka.common.resource.ResourceType.TOPIC
 import org.apache.kafka.common.security.auth.{KafkaPrincipal, SecurityProtocol}
+import org.apache.kafka.network.Session
 import org.apache.kafka.server.authorizer.Action
+
 import scala.jdk.CollectionConverters._
 
 object OpaAuthorizerBenchmark {
@@ -45,7 +45,7 @@ class OpaAuthorizerBenchmark {
 
   def createRequest = {
     val principal = new KafkaPrincipal("User", "user-" + new scala.util.Random().nextInt())
-    val session = RequestChannel.Session(principal, InetAddress.getLoopbackAddress)
+    val session = new Session(principal, InetAddress.getLoopbackAddress)
     val resource = new ResourcePattern(TOPIC, "my-topic", PatternType.LITERAL)
     val authzReqContext = new AzRequestContext(
       clientId = "rdkafka",

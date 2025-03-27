@@ -1,5 +1,8 @@
 package org.openpolicyagent.kafka
 
+import com.fasterxml.jackson.databind.json.JsonMapper
+import com.fasterxml.jackson.databind.module.SimpleModule
+
 import java.net.{InetAddress, URI}
 import java.net.http.HttpRequest.BodyPublishers
 import java.net.http.HttpResponse.BodyHandlers
@@ -7,9 +10,7 @@ import java.net.http.{HttpClient, HttpRequest, HttpResponse}
 import org.junit.runner.RunWith
 import org.scalatestplus.junit.JUnitRunner
 import com.typesafe.scalalogging.LazyLogging
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.scala.{DefaultScalaModule, ScalaObjectMapper}
-import kafka.network.RequestChannel
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import org.apache.kafka.common.acl.AclOperation
 import org.apache.kafka.common.network.{ClientInformation, ListenerName}
 import org.apache.kafka.common.protocol.ApiKeys
@@ -18,10 +19,12 @@ import org.apache.kafka.common.security.auth.{KafkaPrincipal, SecurityProtocol}
 import org.apache.kafka.common.resource.ResourcePattern
 import org.apache.kafka.common.resource.ResourceType
 import org.apache.kafka.common.requests.{RequestContext, RequestHeader}
+import org.apache.kafka.network.Session
 import org.apache.kafka.server.authorizer.{Action, AuthorizationResult}
 import org.scalatest._
 import matchers.should._
 import flatspec._
+import org.apache.kafka.common.message.RequestHeaderData
 
 import java.lang.management.ManagementFactory
 import javax.management.ObjectName
@@ -35,7 +38,15 @@ import scala.jdk.CollectionConverters._
 class OpaAuthorizerSpec extends AnyFlatSpec with Matchers with PrivateMethodTester with LazyLogging {
 
   private val opaUrl = "http://localhost:8181/v1/data/kafka/authz/allow"
-  private val objectMapper = (new ObjectMapper() with ScalaObjectMapper).registerModule(DefaultScalaModule)
+  private val requestSerializerModule = new SimpleModule()
+    .addSerializer(classOf[ResourcePattern], new ResourcePatternSerializer)
+    .addSerializer(classOf[Action], new ActionSerializer)
+    .addSerializer(classOf[RequestContext], new RequestContextSerializer)
+    .addSerializer(classOf[ClientInformation], new ClientInformationSerializer)
+    .addSerializer(classOf[KafkaPrincipal], new KafkaPrincipalSerializer)
+    .addSerializer(classOf[RequestHeader], new RequestHeaderSerializer)
+    .addSerializer(classOf[RequestHeaderData], new RequestHeaderDataSerializer)
+  private val objectMapper = JsonMapper.builder().addModule(requestSerializerModule).addModule(DefaultScalaModule).build()
   private val defaultCacheCapacity = 50000
   private lazy val opaResponse = testOpaConnection()
 
@@ -295,8 +306,8 @@ class OpaAuthorizerSpec extends AnyFlatSpec with Matchers with PrivateMethodTest
 
   def createRequest(username: String, actions: List[Action]): FullRequest = {
     val principal = new KafkaPrincipal("User", username)
-    val session = RequestChannel.Session(principal, InetAddress.getLoopbackAddress)
-    val authzReqContext = new AzRequestContext(
+    val session = new Session(principal, InetAddress.getLoopbackAddress)
+    val authzReqContext = AzRequestContext(
       clientId = "rdkafka",
       requestType = 1,
       listenerName = "SASL_PLAINTEXT",
