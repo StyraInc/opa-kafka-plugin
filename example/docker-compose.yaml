@@ -24,7 +24,7 @@ services:
     # platform: linux/amd64
     image: apache/kafka:4.0.0
     ports:
-    - "9093:9093"
+      - "9093:9093"
     environment:
       CLASSPATH: "/plugin/*"
       KAFKA_AUTHORIZER_CLASS_NAME: org.openpolicyagent.kafka.OpaAuthorizer
