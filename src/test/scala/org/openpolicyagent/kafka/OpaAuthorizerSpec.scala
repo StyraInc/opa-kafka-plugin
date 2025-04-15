@@ -79,7 +79,7 @@ class OpaAuthorizerSpec extends AnyFlatSpec with Matchers with PrivateMethodTest
     val request = createRequest("alice-producer", actions)
 
     opaAuthorizer.authorize(request.requestContext, request.actions.asJava) should be (List(AuthorizationResult.ALLOWED).asJava)
-    opaAuthorizer.getCache.size should be (1)
+    opaAuthorizer.getCache.estimatedSize() should be (1)
   }
 
   "OpaAuthorizer" should "return authorization results for multiple actions in the same request in right order" in {
@@ -103,7 +103,7 @@ class OpaAuthorizerSpec extends AnyFlatSpec with Matchers with PrivateMethodTest
       AuthorizationResult.ALLOWED,
       AuthorizationResult.ALLOWED,
       AuthorizationResult.ALLOWED).asJava)
-    opaAuthorizer.getCache.size should be (4)
+    opaAuthorizer.getCache.estimatedSize() should be (4)
   }
 
   "OpaAuthorizer" should "not authorize when username does not match name of topic" in {
@@ -114,7 +114,7 @@ class OpaAuthorizerSpec extends AnyFlatSpec with Matchers with PrivateMethodTest
     val request = createRequest("alice-producer", actions)
 
     opaAuthorizer.authorize(request.requestContext, request.actions.asJava) should be (List(AuthorizationResult.DENIED).asJava)
-    opaAuthorizer.getCache.size should be (1)
+    opaAuthorizer.getCache.estimatedSize() should be (1)
   }
 
   "OpaAuthorizer" should "not authorize read request for producer" in {
@@ -125,7 +125,7 @@ class OpaAuthorizerSpec extends AnyFlatSpec with Matchers with PrivateMethodTest
     val request = createRequest("alice-producer", actions)
 
     opaAuthorizer.authorize(request.requestContext, request.actions.asJava) should be (List(AuthorizationResult.DENIED).asJava)
-    opaAuthorizer.getCache.size should be (1)
+    opaAuthorizer.getCache.estimatedSize() should be (1)
   }
 
   "OpaAuthorizer" should "not authorize write request for consumer" in {
@@ -136,7 +136,7 @@ class OpaAuthorizerSpec extends AnyFlatSpec with Matchers with PrivateMethodTest
     val request = createRequest("alice-consumer", actions)
 
     opaAuthorizer.authorize(request.requestContext, request.actions.asJava) should be (List(AuthorizationResult.DENIED).asJava)
-    opaAuthorizer.getCache.size should be (1)
+    opaAuthorizer.getCache.estimatedSize() should be (1)
   }
 
   "OpaAuthorizer" should "cache the first request" in {
@@ -150,7 +150,7 @@ class OpaAuthorizerSpec extends AnyFlatSpec with Matchers with PrivateMethodTest
       opaAuthorizer.authorize(request.requestContext, request.actions.asJava) should be (List(AuthorizationResult.ALLOWED).asJava)
     }
 
-    opaAuthorizer.getCache.size should be (1)
+    opaAuthorizer.getCache.estimatedSize() should be (1)
 
     val otherActions = List(
       createAction("bob-topic", AclOperation.READ),
@@ -161,7 +161,7 @@ class OpaAuthorizerSpec extends AnyFlatSpec with Matchers with PrivateMethodTest
       opaAuthorizer.authorize(otherRequest.requestContext, otherRequest.actions.asJava) should be (List(AuthorizationResult.ALLOWED).asJava)
     }
 
-    opaAuthorizer.getCache.size should be (2)
+    opaAuthorizer.getCache.estimatedSize() should be (2)
   }
 
   "OpaAuthorizer" should "not cache decisions while errors occur" in {
@@ -172,7 +172,7 @@ class OpaAuthorizerSpec extends AnyFlatSpec with Matchers with PrivateMethodTest
     val request = createRequest("alice-consumer", actions)
 
     opaAuthorizer.authorize(request.requestContext, request.actions.asJava) should be (List(AuthorizationResult.DENIED).asJava)
-    opaAuthorizer.getCache.size should be (0)
+    opaAuthorizer.getCache.estimatedSize() should be (0)
   }
 
   "OpaAuthorizer" should "authorize super users without checking with OPA" in {
@@ -206,7 +206,7 @@ class OpaAuthorizerSpec extends AnyFlatSpec with Matchers with PrivateMethodTest
       new ListenerName("SASL_PLAINTEXT"), SecurityProtocol.SASL_PLAINTEXT, new ClientInformation("rdkafka", "1.0.0"), false)
 
     opaAuthorizer.authorize(requestContext, actions.asJava) should be (List(AuthorizationResult.ALLOWED).asJava)
-    opaAuthorizer.getCache.size should be (1)
+    opaAuthorizer.getCache.estimatedSize() should be (1)
   }
 
   "OpaAuthorizer" should "set up metrics system if enabled" in {
@@ -287,7 +287,7 @@ class OpaAuthorizerSpec extends AnyFlatSpec with Matchers with PrivateMethodTest
     val cacheUsagePercentageActual = server.getAttribute(
       new ObjectName(MetricsLabel.NAMESPACE + ":type=" + MetricsLabel.REQUEST_HANDLE_GROUP),
       MetricsLabel.CACHE_USAGE_PERCENTAGE)
-    assert(cacheUsagePercentageActual == (opaAuthorizer.getCache.size() / defaultCacheCapacity.toDouble))
+    assert(cacheUsagePercentageActual == (opaAuthorizer.getCache.estimatedSize() / defaultCacheCapacity.toDouble))
   }
 
 
