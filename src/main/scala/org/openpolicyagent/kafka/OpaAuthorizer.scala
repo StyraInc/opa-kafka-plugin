@@ -5,8 +5,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.{JsonSerializer, SerializerProvider}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.cache.{Cache, CacheBuilder}
+import com.github.benmanes.caffeine.cache.Caffeine
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.kafka.common.Endpoint
 import org.apache.kafka.common.acl.{AclBinding, AclBindingFilter, AclOperation}
@@ -19,7 +18,7 @@ import org.apache.kafka.common.resource.{PatternType, ResourcePattern, ResourceT
 import org.apache.kafka.common.security.auth.KafkaPrincipal
 import org.apache.kafka.server.authorizer._
 
-import java.io.{File, FileInputStream}
+import java.io.{File, FileInputStream, IOException}
 import java.net.http.HttpRequest.BodyPublishers
 import java.net.http.HttpResponse.BodyHandlers
 import java.net.http.{HttpClient, HttpRequest}
@@ -27,6 +26,7 @@ import java.net.{URI, URL}
 import java.security.KeyStore
 import java.time.Duration.ofSeconds
 import java.util.concurrent._
+import java.util.function.{Function => JavaFunction}
 import javax.net.ssl.{KeyManagerFactory, SSLContext, TrustManagerFactory}
 import scala.jdk.CollectionConverters._
 
@@ -43,17 +43,19 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
 
   private var metrics: Option[Metrics] = None
 
-  private lazy val cache = CacheBuilder.newBuilder
+  private lazy val cache = Caffeine
+    .newBuilder()
     .initialCapacity(config.getOrElse("opa.authorizer.cache.initial.capacity", "5000").toInt)
     .maximumSize(maxCacheCapacity)
     .expireAfterWrite(config.getOrElse("opa.authorizer.cache.expire.after.seconds", "3600").toInt, TimeUnit.SECONDS)
     .recordStats()
-    .build
-    .asInstanceOf[Cache[CacheableRequest, Boolean]]
+    .build[CacheableRequest, Boolean]
 
-  override def authorize(requestContext: AuthorizableRequestContext, actions: java.util.List[Action]): java.util.List[AuthorizationResult] = {
-    actions.asScala.map { action => authorizeAction(requestContext, action) }.asJava
-  }
+  override def authorize(
+    requestContext: AuthorizableRequestContext,
+    actions: java.util.List[Action]
+  ): java.util.List[AuthorizationResult] =
+    actions.asScala.map(action => authorizeAction(requestContext, action)).asJava
 
   override def configure(configs: java.util.Map[String, _]): Unit = {
     logger.debug(s"Call to configure() with config $configs")
@@ -92,29 +94,38 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
 
   // Not really used but has to be implemented for internal stuff. Can maybe be used to check OPA connectivity?
   // Just doing the same as the acl authorizer does here: https://github.com/apache/kafka/blob/trunk/core/src/main/scala/kafka/security/authorizer/AclAuthorizer.scala#L185
-  override def start(authorizerServerInfo: AuthorizerServerInfo): java.util.Map[Endpoint, _ <: CompletionStage[Void] ] = {
+  override def start(
+    authorizerServerInfo: AuthorizerServerInfo
+  ): java.util.Map[Endpoint, _ <: CompletionStage[Void]] = {
     maybeSetupMetrics(authorizerServerInfo.clusterResource().clusterId(), authorizerServerInfo.brokerId())
-    authorizerServerInfo.endpoints.asScala.map { endpoint =>
-    endpoint -> CompletableFuture.completedFuture[Void](null) }.toMap.asJava
+    authorizerServerInfo.endpoints.asScala
+      .map { endpoint =>
+        endpoint -> CompletableFuture.completedFuture[Void](null)
+      }
+      .toMap
+      .asJava
   }
 
-  private[kafka] def maybeSetupMetrics(clusterId: String, brokerId: Int): Unit ={
+  private[kafka] def maybeSetupMetrics(clusterId: String, brokerId: Int): Unit = {
     val isEnabled = config.getOrElse("opa.authorizer.metrics.enabled", "false").toBoolean
-    if (isEnabled){
+    if (isEnabled) {
       metrics = Option(new Metrics())
       val jmxReporter = new JmxReporter()
       jmxReporter.contextChange(createMetricsContext(clusterId, brokerId))
       metrics.get.addReporter(jmxReporter)
 
-      val authorizedRequestName = metrics.get.metricName(MetricsLabel.AUTHORIZED_REQUEST_COUNT, MetricsLabel.RESULT_GROUP)
+      val authorizedRequestName =
+        metrics.get.metricName(MetricsLabel.AUTHORIZED_REQUEST_COUNT, MetricsLabel.RESULT_GROUP)
       val authorizedRequestSensor = metrics.get.sensor(MetricsLabel.AUTHORIZED_REQUEST_COUNT)
       authorizedRequestSensor.add(authorizedRequestName, new CumulativeCount())
 
-      val unauthorizedRequestName = metrics.get.metricName(MetricsLabel.UNAUTHORIZED_REQUEST_COUNT, MetricsLabel.RESULT_GROUP)
+      val unauthorizedRequestName =
+        metrics.get.metricName(MetricsLabel.UNAUTHORIZED_REQUEST_COUNT, MetricsLabel.RESULT_GROUP)
       val unauthorizedRequestSensor = metrics.get.sensor(MetricsLabel.UNAUTHORIZED_REQUEST_COUNT)
       unauthorizedRequestSensor.add(unauthorizedRequestName, new CumulativeCount())
 
-      val requestToOPAName = metrics.get.metricName(MetricsLabel.REQUEST_TO_OPA_COUNT, MetricsLabel.REQUEST_HANDLE_GROUP)
+      val requestToOPAName =
+        metrics.get.metricName(MetricsLabel.REQUEST_TO_OPA_COUNT, MetricsLabel.REQUEST_HANDLE_GROUP)
       val requestToOPASensor = metrics.get.sensor(MetricsLabel.REQUEST_TO_OPA_COUNT)
       requestToOPASensor.add(requestToOPAName, new CumulativeCount())
 
@@ -122,7 +133,8 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
       val cacheHitSensor = metrics.get.sensor(MetricsLabel.CACHE_HIT_RATE)
       cacheHitSensor.add(cacheHitName, new Value())
 
-      val cacheUsageName = metrics.get.metricName(MetricsLabel.CACHE_USAGE_PERCENTAGE, MetricsLabel.REQUEST_HANDLE_GROUP)
+      val cacheUsageName =
+        metrics.get.metricName(MetricsLabel.CACHE_USAGE_PERCENTAGE, MetricsLabel.REQUEST_HANDLE_GROUP)
       val cacheUsageSensor = metrics.get.sensor(MetricsLabel.CACHE_USAGE_PERCENTAGE)
       cacheUsageSensor.add(cacheUsageName, new Value())
 
@@ -138,15 +150,21 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
     new KafkaMetricsContext(prefix, contextLabels)
   }
 
-
-  @VisibleForTesting
   private[kafka] def getCache = cache
 
   // None of the below needs implementations
   override def close(): Unit = { }
   override def acls(acls: AclBindingFilter): java.lang.Iterable[AclBinding] = ???
-  override def deleteAcls(requestContext: AuthorizableRequestContext, aclBindingFilters: java.util.List[AclBindingFilter]): java.util.List[_ <: CompletionStage[AclDeleteResult]] = ???
-  override def createAcls(requestContext: AuthorizableRequestContext, aclBindings: java.util.List[AclBinding]): java.util.List[_ <: CompletionStage[AclCreateResult]] = ???
+
+  override def deleteAcls(
+    requestContext: AuthorizableRequestContext,
+    aclBindingFilters: java.util.List[AclBindingFilter]
+  ): java.util.List[_ <: CompletionStage[AclDeleteResult]] = ???
+
+  override def createAcls(
+    requestContext: AuthorizableRequestContext,
+    aclBindings: java.util.List[AclBinding]
+  ): java.util.List[_ <: CompletionStage[AclCreateResult]] = ???
 
   private def authorizeAction(requestContext: AuthorizableRequestContext, action: Action): AuthorizationResult = {
     val resource = action.resourcePattern
@@ -158,9 +176,9 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
 
     if(metrics.isDefined){
       metrics.get.sensor(MetricsLabel.CACHE_HIT_RATE).record(cache.stats().hitRate())
-      metrics.get.sensor(MetricsLabel.CACHE_USAGE_PERCENTAGE).record(cache.size() / maxCacheCapacity.toDouble)
+      metrics.get.sensor(MetricsLabel.CACHE_USAGE_PERCENTAGE).record(cache.estimatedSize() / maxCacheCapacity.toDouble)
       result match {
-        case AuthorizationResult.DENIED => metrics.get.sensor(MetricsLabel.UNAUTHORIZED_REQUEST_COUNT).record()
+        case AuthorizationResult.DENIED  => metrics.get.sensor(MetricsLabel.UNAUTHORIZED_REQUEST_COUNT).record()
         case AuthorizationResult.ALLOWED => metrics.get.sensor(MetricsLabel.AUTHORIZED_REQUEST_COUNT).record()
       }
     }
@@ -168,34 +186,38 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
     result
   }
 
-  override def authorizeByResourceType(requestContext: AuthorizableRequestContext, op: AclOperation, resourceType: ResourceType): AuthorizationResult = {
-    doAuthorize(requestContext, new Action(op, new ResourcePattern(resourceType, "", PatternType.PREFIXED), 0, true, true))
-  }
+  override def authorizeByResourceType(
+    requestContext: AuthorizableRequestContext,
+    op: AclOperation,
+    resourceType: ResourceType
+  ): AuthorizationResult =
+    doAuthorize(
+      requestContext,
+      new Action(op, new ResourcePattern(resourceType, "", PatternType.PREFIXED), 0, true, true)
+    )
 
   private def doAuthorize(requestContext: AuthorizableRequestContext, action: Action) = {
     // ensure we compare identical classes
     val sessionPrincipal = requestContext.principal
-    val principal = if (classOf[KafkaPrincipal] != sessionPrincipal.getClass)
-      new KafkaPrincipal(sessionPrincipal.getPrincipalType, sessionPrincipal.getName)
-    else
-      sessionPrincipal
+    val principal =
+      if (classOf[KafkaPrincipal] != sessionPrincipal.getClass)
+        new KafkaPrincipal(sessionPrincipal.getPrincipalType, sessionPrincipal.getName)
+      else
+        sessionPrincipal
 
     val host = requestContext.clientAddress.getHostAddress
 
     val cachableRequest = CacheableRequest(principal, action, host)
     val request = Request(Input(requestContext, action))
 
-    def allowAccess = {
-      try {
-        cache.get(cachableRequest, new AllowCallable(request, opaUrl, allowOnError, metrics))
-      }
+    def allowAccess =
+      try cache.get(cachableRequest, new AllowCallable(request, opaUrl, allowOnError, metrics))
       catch {
-        case e: ExecutionException =>
+        case e: Exception =>
           logger.warn(s"Exception in decision retrieval: ${e.getMessage}")
           logger.trace("Exception trace", e)
           allowOnError
       }
-    }
 
     // Evaluate if operation is allowed
     val authorized = isSuperUser(principal) || allowAccess
@@ -203,12 +225,11 @@ class OpaAuthorizer extends Authorizer with LazyLogging {
     if (authorized) AuthorizationResult.ALLOWED else AuthorizationResult.DENIED
   }
 
-  def isSuperUser(principal: KafkaPrincipal): Boolean = {
+  def isSuperUser(principal: KafkaPrincipal): Boolean =
     if (superUsers.contains(principal.toString)) {
-      logger.trace(s"User ${principal} is super user")
+      logger.trace(s"User $principal is super user")
       return true
     } else false
-  }
 }
 
 class ResourcePatternSerializer() extends JsonSerializer[ResourcePattern] {
@@ -297,14 +318,24 @@ object AllowCallable {
     .addSerializer(classOf[KafkaPrincipal], new KafkaPrincipalSerializer)
     .addSerializer(classOf[RequestHeader], new RequestHeaderSerializer)
     .addSerializer(classOf[RequestHeaderData], new RequestHeaderDataSerializer)
-  private val objectMapper = JsonMapper.builder().addModule(requestSerializerModule).addModule(DefaultScalaModule).build()
+
+  private val objectMapper =
+    JsonMapper.builder().addModule(requestSerializerModule).addModule(DefaultScalaModule).build()
 
   // If a TrusStore is configured by the user,
   // This HttpClient is replaced by OpaAuthorizer.configure()
   var client = HttpClient.newBuilder.connectTimeout(ofSeconds(5)).build
 }
-class AllowCallable(request: Request, opaUrl: URI, allowOnError: Boolean, metrics: Option[Metrics]) extends Callable[Boolean] with LazyLogging {
-  override def call(): Boolean = {
+
+class AllowCallable(
+  request: Request,
+  opaUrl: URI,
+  allowOnError: Boolean,
+  metrics: Option[Metrics]
+) extends JavaFunction[CacheableRequest, Boolean]
+    with LazyLogging {
+
+  override def apply(key: CacheableRequest): Boolean = {
     logger.debug(s"Cache miss, querying OPA for decision")
     val reqJson = AllowCallable.objectMapper.writeValueAsString(request)
     val requestBuilder = HttpRequest.newBuilder.timeout(ofSeconds(5)).header("Content-Type", "application/json")
